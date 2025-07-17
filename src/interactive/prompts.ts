@@ -48,7 +48,10 @@ export async function askChoice<T>(
 ): Promise<T> {
 	console.log(question);
 	for (let i = 0; i < choices.length; i++) {
-		console.log(`  ${i + 1}. ${choices[i]!.name}`);
+		const choice = choices[i];
+		if (choice) {
+			console.log(`  ${i + 1}. ${choice.name}`);
+		}
 	}
 
 	while (true) {
@@ -56,7 +59,10 @@ export async function askChoice<T>(
 		const index = Number.parseInt(answer.trim(), 10) - 1;
 
 		if (index >= 0 && index < choices.length) {
-			return choices[index]!.value;
+			const choice = choices[index];
+			if (choice) {
+				return choice.value;
+			}
 		}
 
 		console.log("Invalid selection. Please try again.");
@@ -72,7 +78,10 @@ export async function askMultipleChoice<T>(
 ): Promise<T[]> {
 	console.log(question);
 	for (let i = 0; i < choices.length; i++) {
-		console.log(`  ${i + 1}. ${choices[i]!.name}`);
+		const choice = choices[i];
+		if (choice) {
+			console.log(`  ${i + 1}. ${choice.name}`);
+		}
 	}
 	console.log(
 		"Enter numbers separated by spaces (e.g., '1 3' for first and third):",
@@ -86,7 +95,14 @@ export async function askMultipleChoice<T>(
 			.map((n) => Number.parseInt(n, 10));
 
 		if (numbers.every((num) => num >= 1 && num <= choices.length)) {
-			return numbers.map((num) => choices[num - 1]!.value);
+			const results: T[] = [];
+			for (const num of numbers) {
+				const choice = choices[num - 1];
+				if (choice) {
+					results.push(choice.value);
+				}
+			}
+			return results;
 		}
 
 		console.log("Invalid selection. Please try again.");
