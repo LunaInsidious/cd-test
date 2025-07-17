@@ -3,16 +3,29 @@
 	"version": "1.0.0",
 	"main": "src/index.ts",
 	"scripts": {
-		"test": "echo \"Error: no test specified\" && exit 1"
+		"lint": "biome check",
+		"format": "biome format --write",
+		"build": "tsc --build",
+		"prebuild": "npm run lint && npm run format",
+		"test": "vitest --run",
+		"test:watch": "vitest --watch",
+		"test:coverage": "vitest --coverage",
+		"web-search": "gemini --prompt"
 	},
 	"keywords": [],
 	"author": "",
 	"license": "MIT",
 	"description": "",
+	"dependencies": {
+		"zod": "^3.23.8"
+	},
 	"devDependencies": {
 		"@biomejs/biome": "1.9.4",
 		"@tsconfig/strictest": "^2.0.5",
 		"@types/node": "^22.15.2",
-		"typescript": "^5.8.3"
+		"@vitest/coverage-v8": "^3.2.4",
+		"typescript": "^5.8.3",
+		"typescript-language-server": "^4.3.4",
+		"vitest": "^3.2.4"
 	}
 }
