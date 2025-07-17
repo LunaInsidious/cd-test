@@ -11,6 +11,72 @@ A TypeScript-based Continuous Deployment (CD) tool designed for monorepo managem
 - **📋 Automated Workflows**: GitHub Actions workflow generation for each registry type
 - **🔄 Interactive CLI**: User-friendly prompts for tag selection and branch management
 - **🎯 Differential Releases**: Smart detection of changed projects with dependency management
+- **🔗 GitHub Integration**: Direct GitHub CLI integration for PR and release management
+
+## 📋 Prerequisites
+
+### Required Tools
+
+1. **Node.js 20+**
+   ```bash
+   node --version  # Should be 20.0.0 or higher
+   ```
+
+2. **Git**
+   ```bash
+   git --version
+   ```
+
+3. **GitHub CLI (gh)** - **REQUIRED**
+   ```bash
+   # Install GitHub CLI
+   # On macOS
+   brew install gh
+   
+   # On Ubuntu/Debian
+   sudo apt install gh
+   
+   # On Windows
+   winget install --id GitHub.cli
+   
+   # Or download from https://cli.github.com/
+   ```
+
+4. **GitHub CLI Authentication** - **REQUIRED**
+   ```bash
+   # Authenticate with GitHub
+   gh auth login
+   
+   # Verify authentication
+   gh auth status
+   ```
+
+### Required GitHub Permissions
+
+The GitHub CLI must be authenticated with a token that has the following permissions:
+
+#### Repository Permissions (Required):
+- **Contents**: Write ✅ (for creating commits)
+- **Metadata**: Read ✅ (for basic repository info)
+- **Pull requests**: Write ✅ (for creating/updating/merging PRs)
+- **Actions**: Read ✅ (for checking CI status)
+
+#### Optional Permissions (for enhanced features):
+- **Administration**: Write (for creating releases)
+- **Issues**: Write (for linking issues to PRs)
+
+#### Authentication Setup:
+```bash
+# Interactive authentication (recommended)
+gh auth login
+
+# Or use a personal access token
+gh auth login --with-token < token.txt
+```
+
+**Personal Access Token Scopes** (if using token authentication):
+- `repo` (Full control of private repositories)
+- `workflow` (Update GitHub Action workflows)
 
 ## 🚀 Installation
 
@@ -29,13 +95,21 @@ npm run build
 
 ## ⚡ Quick Start
 
-1. **Initialize your project:**
+1. **Verify prerequisites:**
+   ```bash
+   node --version    # Check Node.js
+   git --version     # Check Git
+   gh --version      # Check GitHub CLI
+   gh auth status    # Check GitHub authentication
+   ```
+
+2. **Initialize your project:**
    ```bash
    cd-tools init
    ```
    This creates `.cdtools/config.json` and GitHub workflow files.
 
-2. **Configure your project** by editing `.cdtools/config.json`:
+3. **Configure your project** by editing `.cdtools/config.json`:
    ```json
    {
      "baseVersion": "1.0.0",
@@ -71,7 +145,7 @@ npm run build
    }
    ```
 
-3. **Start a release:**
+4. **Start a release:**
    ```bash
    cd-tools start-pr
    ```
@@ -80,22 +154,23 @@ npm run build
    - Creates `rc:branch-name` branch
    - Sets up release tracking
 
-4. **Update versions and create PR:**
+5. **Update versions and create PR:**
    ```bash
    cd-tools push-pr
    ```
    - Detects changed files
    - Updates project versions
    - Commits and pushes changes
-   - Creates GitHub PR
+   - **Automatically creates GitHub PR** ✨
 
-5. **Finalize release:**
+6. **Finalize release:**
    ```bash
    cd-tools end-pr
    ```
    - Applies final version (e.g., rc → stable)
+   - **Checks CI status and merges PR** ✨
+   - **Creates GitHub release** ✨
    - Cleans up tracking files
-   - Provides merge instructions
 
 ## 🛠️ Commands
 
@@ -121,15 +196,50 @@ npm run build
 - Calculates new versions based on tag strategy
 - Updates `package.json` or `Cargo.toml` files
 - Commits and pushes version changes
-- GitHub PR creation integration
+- **Automatically creates/updates GitHub PR using `gh` CLI**
+- Generates detailed PR description with change summary
 
 ### `cd-tools end-pr`
-**Finalizes the release and prepares for merge.**
+**Finalizes the release and merges the PR.**
 
 - Handles version tag transitions (e.g., `rc` → `stable`)
 - Updates to final stable versions if configured
+- **Checks CI status and PR mergeability**
+- **Interactive merge method selection** (squash/merge/rebase)
+- **Automatically merges PR using `gh` CLI**
+- **Creates GitHub release for stable versions**
 - Cleans up tracking files
-- Provides merge and release instructions
+
+## 🔧 GitHub CLI Integration
+
+CD Tools integrates directly with GitHub CLI for seamless automation:
+
+### PR Management
+- **Automatic PR creation** with detailed descriptions
+- **PR status checking** (CI, mergeability)
+- **Interactive merge options** with safety checks
+- **Automatic PR updates** when pushing new versions
+
+### Release Management
+- **Automatic GitHub release creation** for stable versions
+- **Release note generation** from project changes
+- **Tag creation** with proper versioning
+
+### Error Handling
+- **GitHub CLI availability checks** with helpful error messages
+- **Authentication verification** before operations
+- **Graceful fallbacks** with manual instructions when needed
+
+### Example GitHub Integration Flow:
+```bash
+cd-tools push-pr
+# ✅ GitHub PR created: https://github.com/user/repo/pull/123
+
+cd-tools end-pr
+# ✅ CI checks passed
+# ✅ PR merged with squash method
+# ✅ GitHub release created: https://github.com/user/repo/releases/tag/v1.0.1
+```
 
 ## ⚙️ Configuration
 
@@ -230,8 +340,9 @@ src/
 │   └── manager.ts    # Version management
 ├── fs/            # File system utilities
 │   └── utils.ts   # File operations
-├── git/           # Git operations
-│   └── operations.ts # Git commands
+├── git/           # Git and GitHub operations
+│   ├── operations.ts # Git commands
+│   └── github.ts     # GitHub CLI integration ✨
 ├── interactive/   # User interaction
 │   └── prompts.ts # CLI prompts
 └── index.ts       # Main entry point
@@ -243,6 +354,7 @@ src/
 - Node.js 20+
 - TypeScript 5.8+
 - Git
+- **GitHub CLI (gh)** - for testing GitHub integration features
 
 ### Setup
 ```bash
@@ -277,6 +389,7 @@ npm run test:coverage  # Detailed coverage report
 - CLI argument parsing and command routing
 - File system operations and git integration
 - Command implementations and error handling
+- GitHub CLI integration (mocked in tests)
 
 ### Technology Stack
 
@@ -285,6 +398,7 @@ npm run test:coverage  # Detailed coverage report
 - **Vitest** for testing framework
 - **Biome** for linting and formatting (unified tool)
 - **Node.js ES modules** with ESM-first architecture
+- **GitHub CLI** for GitHub integration
 
 ### Code Quality
 
@@ -299,24 +413,25 @@ npm run test:coverage  # Detailed coverage report
 ```bash
 cd-tools start-pr          # Select "alpha" tag
 # Make changes...
-cd-tools push-pr           # Creates 1.0.1-alpha.20250717123456
-cd-tools end-pr            # Finalize and merge
+cd-tools push-pr           # Creates 1.0.1-alpha.20250717123456 + GitHub PR
+cd-tools end-pr            # Merge PR and finalize
 ```
 
 ### RC to Stable Flow
 ```bash
 cd-tools start-pr          # Select "rc" tag  
 # Make changes...
-cd-tools push-pr           # Creates 1.0.1-rc.0
-cd-tools push-pr           # Creates 1.0.1-rc.1 (if more changes)
-cd-tools end-pr            # Creates 1.0.1 stable and merges
+cd-tools push-pr           # Creates 1.0.1-rc.0 + GitHub PR
+cd-tools push-pr           # Creates 1.0.1-rc.1 + Updates PR (if more changes)
+cd-tools end-pr            # Creates 1.0.1 stable + Merges PR + GitHub Release
 ```
 
 ### Multi-Project Release
 ```bash
 # Changes to both frontend/ and backend/
-cd-tools push-pr           # Updates both package.json and Cargo.toml
+cd-tools push-pr           # Updates both package.json and Cargo.toml + Creates PR
 # GitHub Actions triggered for both npm and crates.io
+cd-tools end-pr            # Merges PR + Creates release
 ```
 
 ## 🔒 Library Installation Policy
@@ -336,7 +451,8 @@ This policy ensures thoughtful dependency management and maintains project simpl
 4. Implement your changes
 5. Ensure all tests pass (`npm test`)
 6. Check linting (`npm run lint`)
-7. Submit a pull request
+7. **Test GitHub CLI integration** (ensure `gh auth status` works)
+8. Submit a pull request
 
 ### Development Guidelines
 
@@ -345,6 +461,53 @@ This policy ensures thoughtful dependency management and maintains project simpl
 - Use TypeScript strict mode
 - Follow existing code patterns
 - Update documentation for new features
+- Test GitHub CLI integration features
+
+## 🚨 Troubleshooting
+
+### GitHub CLI Issues
+
+**"gh: command not found"**
+```bash
+# Install GitHub CLI from https://cli.github.com/
+# On macOS: brew install gh
+# On Ubuntu: sudo apt install gh
+# On Windows: winget install --id GitHub.cli
+```
+
+**"gh auth status" fails**
+```bash
+# Authenticate with GitHub
+gh auth login
+# Follow the interactive prompts
+```
+
+**"insufficient permissions" error**
+```bash
+# Re-authenticate with required scopes
+gh auth refresh -s repo,workflow
+```
+
+**PR creation fails**
+```bash
+# Check if you're on the correct branch
+git branch --show-current
+
+# Ensure you have commits to create PR from
+git log --oneline -5
+```
+
+### Common Issues
+
+**"No tracking file found"**
+- Run `cd-tools start-pr` first to initialize a release
+
+**"Version tag configuration not found"**
+- Check your `.cdtools/config.json` for correct version tag configuration
+
+**"Cannot find module" errors**
+- Run `npm run build` to compile TypeScript
+- Ensure all dependencies are installed with `npm install`
 
 ## 📄 License
 
@@ -365,10 +528,11 @@ MIT License - see LICENSE file for details.
 - ✅ All 4 main commands (init, start-pr, push-pr, end-pr)
 - ✅ File system utilities (package.json, Cargo.toml)
 - ✅ Git operations integration
+- ✅ **GitHub CLI integration** (PR creation, merging, releases)
 - ✅ Interactive prompts system
 - ✅ GitHub workflow generation
 - ✅ 95+ comprehensive tests
 - ✅ TypeScript strict compilation
 - ✅ Biome linting/formatting
 
-The tool is **production-ready** for monorepo CD workflows with flexible version management.
+The tool is **production-ready** for monorepo CD workflows with full GitHub integration via GitHub CLI.
