@@ -1,7 +1,11 @@
 {
 	"name": "cd-test",
 	"version": "1.0.0",
-	"main": "src/index.ts",
+	"main": "dist/index.js",
+	"bin": {
+		"cd-tools": "dist/index.js"
+	},
+	"type": "module",
 	"scripts": {
 		"lint": "biome check",
 		"format": "biome format --write",
@@ -10,12 +14,13 @@
 		"test": "vitest --run",
 		"test:watch": "vitest --watch",
 		"test:coverage": "vitest --coverage",
-		"web-search": "gemini --prompt"
+		"web-search": "gemini --prompt",
+		"dev": "npm run build && node dist/index.js"
 	},
 	"keywords": [],
 	"author": "",
 	"license": "MIT",
-	"description": "",
+	"description": "CD (Continuous Deployment) tool for monorepo management",
 	"dependencies": {
 		"zod": "^3.23.8"
 	},
