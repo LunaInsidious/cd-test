@@ -3,7 +3,13 @@ import { join } from "node:path";
 import { loadConfig } from "../config/parser.js";
 import { readFileContent } from "../fs/utils.js";
 import { commitChanges, pushChanges } from "../git/operations.js";
-import { askYesNo } from "../interactive/prompts.js";
+import {
+	mergePullRequest,
+	getPRStatus,
+	createRelease,
+	GitHubError,
+} from "../git/github.js";
+import { askYesNo, askChoice } from "../interactive/prompts.js";
 
 export async function endPrCommand(): Promise<void> {
 	console.log("🏁 Finalizing release and merging PR...");
@@ -66,6 +72,81 @@ export async function endPrCommand(): Promise<void> {
 		console.log("🚀 Stable release deployed!");
 	}
 
+	// Check PR status before merging
+	try {
+		const prStatus = await getPRStatus();
+		console.log(`📋 PR Status: ${prStatus.state}`);
+		
+		if (!prStatus.mergeable) {
+			console.warn("⚠️  PR is not mergeable. Please resolve conflicts first.");
+			return;
+		}
+
+		// Check CI status
+		const failedChecks = prStatus.checks.filter(
+			(check) => check.status === "FAILURE" || check.status === "ERROR",
+		);
+		if (failedChecks.length > 0) {
+			console.warn("⚠️  Some CI checks are failing:");
+			for (const check of failedChecks) {
+				console.warn(`   - ${check.name}: ${check.status}`);
+			}
+			
+			const proceedAnyway = await askYesNo(
+				"Proceed with merge despite failing checks?",
+				false,
+			);
+			if (!proceedAnyway) {
+				console.log("❌ Merge cancelled. Fix CI issues and try again.");
+				return;
+			}
+		}
+
+		// Choose merge method
+		const mergeMethod = await askChoice(
+			"Select merge method:",
+			[
+				{ name: "Squash and merge (recommended)", value: "squash" as const },
+				{ name: "Create merge commit", value: "merge" as const },
+				{ name: "Rebase and merge", value: "rebase" as const },
+			],
+		);
+
+		// Merge the PR
+		console.log(`🔀 Merging PR with ${mergeMethod} method...`);
+		await mergePullRequest(mergeMethod);
+		console.log("✅ PR merged successfully!");
+
+		// Create GitHub release for stable versions
+		if (finalVersion === config.baseVersion) {
+			const createGitHubRelease = await askYesNo(
+				"Create GitHub release?",
+				true,
+			);
+			if (createGitHubRelease) {
+				const releaseBody = generateReleaseNotes(
+					finalVersion,
+					Object.keys(trackingData.releasedWorkspaces),
+				);
+				
+				const releaseUrl = await createRelease(
+					`v${finalVersion}`,
+					`Release ${finalVersion}`,
+					releaseBody,
+				);
+				console.log(`✅ Created GitHub release: ${releaseUrl}`);
+			}
+		}
+
+	} catch (error) {
+		if (error instanceof GitHubError) {
+			console.error(`❌ GitHub CLI error: ${error.message}`);
+			console.log("💡 You can merge the PR manually in the GitHub web interface");
+		} else {
+			throw error;
+		}
+	}
+
 	// Clean up tracking file
 	const confirmCleanup = await askYesNo(
 		"Delete tracking file and finalize release?",
@@ -77,15 +158,25 @@ export async function endPrCommand(): Promise<void> {
 		await pushChanges();
 
 		console.log("🧹 Cleaned up tracking file");
-
-		// Merge PR suggestion
-		console.log("📋 To complete the release:");
-		console.log("1. Ensure CI passes");
-		console.log("2. Run: gh pr merge --squash");
-		console.log("3. Create GitHub release if needed");
 	}
 
 	console.log("✅ End PR completed successfully!");
+}
+
+function generateReleaseNotes(
+	version: string,
+	releasedProjects: string[],
+): string {
+	return `## Release ${version}
+
+### Updated Projects
+${releasedProjects.map((project) => `- ${project}`).join("\n")}
+
+### What Changed
+This release includes updates to the above projects with version ${version}.
+
+---
+*This release was created automatically by cd-tools*`;
 }
 
 async function findTrackingFile(): Promise<string | null> {
