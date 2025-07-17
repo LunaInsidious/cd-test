@@ -3,7 +3,10 @@ import { join } from "node:path";
 import { configSchema, type Config } from "./schema.js";
 
 export class ConfigParseError extends Error {
-	constructor(message: string, public readonly cause?: Error) {
+	constructor(
+		message: string,
+		public readonly cause?: Error,
+	) {
 		super(message);
 		this.name = "ConfigParseError";
 	}
