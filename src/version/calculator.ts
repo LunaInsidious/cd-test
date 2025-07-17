@@ -21,6 +21,11 @@ export function parseVersion(version: string): VersionInfo {
 	}
 
 	const [, majorStr, minorStr, patchStr, prerelease] = match;
+	
+	if (!majorStr || !minorStr || !patchStr) {
+		throw new VersionCalculationError(`Invalid version format: ${version}`);
+	}
+
 	const major = Number.parseInt(majorStr, 10);
 	const minor = Number.parseInt(minorStr, 10);
 	const patch = Number.parseInt(patchStr, 10);
@@ -85,7 +90,7 @@ export function calculateNextVersion(
 		const current = parseVersion(currentVersion);
 		if (current.prerelease) {
 			const prereleaseMatch = current.prerelease.match(/^(.+)\.(\d+)$/);
-			if (prereleaseMatch && prereleaseMatch[1] === tag) {
+			if (prereleaseMatch && prereleaseMatch[1] === tag && prereleaseMatch[2]) {
 				const nextIncrement = Number.parseInt(prereleaseMatch[2], 10) + 1;
 				return formatVersion({
 					...current,
