@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 import type { Config } from "../config/index.js";
 import { VersionManager, VersionManagerError } from "./manager.js";
 
