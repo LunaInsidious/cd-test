@@ -87,16 +87,20 @@ export function calculateNextVersion(
 
 	// Increment strategy
 	if (currentVersion) {
-		const current = parseVersion(currentVersion);
-		if (current.prerelease) {
-			const prereleaseMatch = current.prerelease.match(/^(.+)\.(\d+)$/);
-			if (prereleaseMatch && prereleaseMatch[1] === tag && prereleaseMatch[2]) {
-				const nextIncrement = Number.parseInt(prereleaseMatch[2], 10) + 1;
-				return formatVersion({
-					...current,
-					prerelease: `${tag}.${nextIncrement}`,
-				});
+		try {
+			const current = parseVersion(currentVersion);
+			if (current.prerelease) {
+				const prereleaseMatch = current.prerelease.match(/^(.+)\.(\d+)$/);
+				if (prereleaseMatch && prereleaseMatch[1] === tag && prereleaseMatch[2]) {
+					const nextIncrement = Number.parseInt(prereleaseMatch[2], 10) + 1;
+					return formatVersion({
+						...current,
+						prerelease: `${tag}.${nextIncrement}`,
+					});
+				}
 			}
+		} catch {
+			// If current version is invalid, fall through to default behavior
 		}
 	}
 
@@ -115,12 +119,16 @@ export function getNextTagVersion(
 ): string {
 	if (nextTag === "stable") {
 		if (currentVersion) {
-			const current = parseVersion(currentVersion);
-			return formatVersion({
-				major: current.major,
-				minor: current.minor,
-				patch: current.patch,
-			});
+			try {
+				const current = parseVersion(currentVersion);
+				return formatVersion({
+					major: current.major,
+					minor: current.minor,
+					patch: current.patch,
+				});
+			} catch {
+				// If current version is invalid, fall back to increment
+			}
 		}
 		return calculateNextVersion(baseVersion, nextTag, "increment");
 	}
