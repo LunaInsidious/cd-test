@@ -76,7 +76,10 @@ export async function initCommand(): Promise<void> {
 
 	// Generate default configuration
 	const defaultConfig = generateDefaultConfig(selectedRegistries);
-	await writeFile(".cdtools/config.json", JSON.stringify(defaultConfig, null, 2));
+	await writeFile(
+		".cdtools/config.json",
+		JSON.stringify(defaultConfig, null, 2),
+	);
 	console.log("✅ Created .cdtools/config.json");
 
 	console.log("\n🎉 CD tools initialization complete!");
@@ -282,7 +285,8 @@ function generateDefaultConfig(registries: string[]): object {
 		}>,
 		releaseNotes: {
 			enabled: true,
-			template: "## Changes\n\n{{changes}}\n\n## Contributors\n\n{{contributors}}",
+			template:
+				"## Changes\n\n{{changes}}\n\n## Contributors\n\n{{contributors}}",
 		},
 	};
 
