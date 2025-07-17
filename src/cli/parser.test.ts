@@ -101,13 +101,13 @@ describe("CLI Parser", () => {
 				"feature",
 				"--tag",
 				"rc",
-				"-v",
+				"--verbose",
 				"arg1",
 			]);
 			expect(result).toEqual({
 				command: "start-pr",
 				subcommand: "feature",
-				options: { tag: "rc", v: true },
+				options: { tag: "rc", verbose: true },
 				positional: ["arg1"],
 			});
 		});
