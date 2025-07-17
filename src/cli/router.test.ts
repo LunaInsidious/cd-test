@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { ParsedArgs } from "./parser.js";
 import { CommandRouter } from "./router.js";
 
