@@ -26,7 +26,9 @@ const releaseNotesSchema = z.object({
 });
 
 export const configSchema = z.object({
-	baseVersion: z.string().regex(/^\d+\.\d+\.\d+$/, "Invalid semantic version format"),
+	baseVersion: z
+		.string()
+		.regex(/^\d+\.\d+\.\d+$/, "Invalid semantic version format"),
 	versionTags: z.array(versionTagSchema),
 	projects: z.array(projectSchema),
 	releaseNotes: releaseNotesSchema,
