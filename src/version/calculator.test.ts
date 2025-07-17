@@ -138,12 +138,7 @@ describe("Version Calculator", () => {
 
 	describe("getNextTagVersion", () => {
 		it("should transition to stable version", () => {
-			const result = getNextTagVersion(
-				"1.0.0",
-				"rc",
-				"stable",
-				"1.0.1-rc.5",
-			);
+			const result = getNextTagVersion("1.0.0", "rc", "stable", "1.0.1-rc.5");
 			expect(result).toBe("1.0.1");
 		});
 
@@ -153,12 +148,7 @@ describe("Version Calculator", () => {
 		});
 
 		it("should transition to another prerelease tag", () => {
-			const result = getNextTagVersion(
-				"1.0.0",
-				"alpha",
-				"rc",
-				"1.0.1-alpha.5",
-			);
+			const result = getNextTagVersion("1.0.0", "alpha", "rc", "1.0.1-alpha.5");
 			expect(result).toBe("1.0.1-rc.0");
 		});
 	});

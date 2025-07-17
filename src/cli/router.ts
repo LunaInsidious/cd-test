@@ -67,7 +67,9 @@ export class CommandRouter {
 
 			if (command.subcommands) {
 				for (const subcommand of command.subcommands) {
-					lines.push(`    ${subcommand.name.padEnd(10)} ${subcommand.description}`);
+					lines.push(
+						`    ${subcommand.name.padEnd(10)} ${subcommand.description}`,
+					);
 				}
 			}
 		}

@@ -90,7 +90,10 @@ export function validateSubcommand(
 	parsedArgs: ParsedArgs,
 	validSubcommands: string[],
 ): void {
-	if (parsedArgs.subcommand && !validSubcommands.includes(parsedArgs.subcommand)) {
+	if (
+		parsedArgs.subcommand &&
+		!validSubcommands.includes(parsedArgs.subcommand)
+	) {
 		throw new CLIParseError(
 			`Unknown subcommand: ${parsedArgs.subcommand}. Valid subcommands: ${validSubcommands.join(", ")}`,
 		);

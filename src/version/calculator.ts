@@ -91,7 +91,11 @@ export function calculateNextVersion(
 			const current = parseVersion(currentVersion);
 			if (current.prerelease) {
 				const prereleaseMatch = current.prerelease.match(/^(.+)\.(\d+)$/);
-				if (prereleaseMatch && prereleaseMatch[1] === tag && prereleaseMatch[2]) {
+				if (
+					prereleaseMatch &&
+					prereleaseMatch[1] === tag &&
+					prereleaseMatch[2]
+				) {
 					const nextIncrement = Number.parseInt(prereleaseMatch[2], 10) + 1;
 					return formatVersion({
 						...current,

@@ -33,7 +33,8 @@ function createRouter(): CommandRouter {
 	// Register placeholder commands - will be implemented later
 	router.register({
 		name: "init",
-		description: "Initialize project with GitHub workflows and default configuration",
+		description:
+			"Initialize project with GitHub workflows and default configuration",
 		handler: async (args) => {
 			console.log("Init command called with:", args);
 			console.log("This command will be implemented in the next phase");

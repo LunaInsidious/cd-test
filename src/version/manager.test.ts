@@ -105,7 +105,10 @@ describe("Version Manager", () => {
 		});
 
 		it("should continue with same tag if no next specified", () => {
-			const version = manager.calculateNextTagVersion("alpha", "1.0.1-alpha.20230629135030");
+			const version = manager.calculateNextTagVersion(
+				"alpha",
+				"1.0.1-alpha.20230629135030",
+			);
 			// Alpha uses timestamp, so just check format
 			expect(version).toMatch(/^1\.0\.1-alpha\.\d{14}$/);
 		});
