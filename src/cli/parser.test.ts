@@ -153,9 +153,9 @@ describe("CLI Parser", () => {
 
 		it("should throw for invalid subcommand", () => {
 			const args = parseArgs(["git", "invalid"]);
-			expect(() =>
-				validateSubcommand(args, ["clone", "push", "pull"]),
-			).toThrow(CLIParseError);
+			expect(() => validateSubcommand(args, ["clone", "push", "pull"])).toThrow(
+				CLIParseError,
+			);
 		});
 	});
 
