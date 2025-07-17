@@ -20,13 +20,15 @@ export function parseVersion(version: string): VersionInfo {
 		throw new VersionCalculationError(`Invalid version format: ${version}`);
 	}
 
-	const [, major, minor, patch, prerelease] = match;
-	return {
-		major: Number.parseInt(major, 10),
-		minor: Number.parseInt(minor, 10),
-		patch: Number.parseInt(patch, 10),
-		prerelease,
-	};
+	const [, majorStr, minorStr, patchStr, prerelease] = match;
+	const major = Number.parseInt(majorStr, 10);
+	const minor = Number.parseInt(minorStr, 10);
+	const patch = Number.parseInt(patchStr, 10);
+
+	if (prerelease) {
+		return { major, minor, patch, prerelease };
+	}
+	return { major, minor, patch };
 }
 
 export function formatVersion(versionInfo: VersionInfo): string {
@@ -57,14 +59,16 @@ export function calculateNextVersion(
 	// For stable version, increment patch
 	if (tag === "stable") {
 		return formatVersion({
-			...base,
+			major: base.major,
+			minor: base.minor,
 			patch: base.patch + 1,
 		});
 	}
 
 	// For non-stable versions, add prerelease suffix
 	const newBase = {
-		...base,
+		major: base.major,
+		minor: base.minor,
 		patch: base.patch + 1,
 	};
 
@@ -100,7 +104,7 @@ export function calculateNextVersion(
 
 export function getNextTagVersion(
 	baseVersion: string,
-	currentTag: string,
+	_currentTag: string,
 	nextTag: string,
 	currentVersion?: string,
 ): string {
@@ -108,8 +112,9 @@ export function getNextTagVersion(
 		if (currentVersion) {
 			const current = parseVersion(currentVersion);
 			return formatVersion({
-				...current,
-				prerelease: undefined,
+				major: current.major,
+				minor: current.minor,
+				patch: current.patch,
 			});
 		}
 		return calculateNextVersion(baseVersion, nextTag, "increment");
@@ -118,7 +123,8 @@ export function getNextTagVersion(
 	// For non-stable next tags, start from .0
 	const base = parseVersion(baseVersion);
 	const newBase = {
-		...base,
+		major: base.major,
+		minor: base.minor,
 		patch: base.patch + 1,
 	};
 
