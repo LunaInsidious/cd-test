@@ -18,6 +18,11 @@ export function parseArgs(args: string[]): ParsedArgs {
 	}
 
 	const [command, ...rest] = args;
+	
+	if (!command) {
+		throw new CLIParseError("No command provided");
+	}
+
 	const options: Record<string, string | boolean> = {};
 	const positional: string[] = [];
 	let subcommand: string | undefined;
@@ -25,6 +30,11 @@ export function parseArgs(args: string[]): ParsedArgs {
 	let i = 0;
 	while (i < rest.length) {
 		const arg = rest[i];
+		
+		if (!arg) {
+			i++;
+			continue;
+		}
 
 		// Handle long options (--option or --option=value)
 		if (arg.startsWith("--")) {
@@ -36,8 +46,9 @@ export function parseArgs(args: string[]): ParsedArgs {
 			} else {
 				const key = arg.slice(2);
 				// Check if next arg is a value or another option
-				if (i + 1 < rest.length && !rest[i + 1].startsWith("-")) {
-					options[key] = rest[i + 1];
+				const nextArg = rest[i + 1];
+				if (nextArg && !nextArg.startsWith("-")) {
+					options[key] = nextArg;
 					i++; // Skip next arg since we used it as value
 				} else {
 					options[key] = true; // Boolean flag
@@ -48,8 +59,9 @@ export function parseArgs(args: string[]): ParsedArgs {
 		else if (arg.startsWith("-") && arg.length > 1) {
 			const key = arg.slice(1);
 			// Check if next arg is a value or another option
-			if (i + 1 < rest.length && !rest[i + 1].startsWith("-")) {
-				options[key] = rest[i + 1];
+			const nextArg = rest[i + 1];
+			if (nextArg && !nextArg.startsWith("-")) {
+				options[key] = nextArg;
 				i++; // Skip next arg since we used it as value
 			} else {
 				options[key] = true; // Boolean flag
