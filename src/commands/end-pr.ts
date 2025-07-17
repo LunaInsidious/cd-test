@@ -1,10 +1,9 @@
 import { readdir, unlink } from "node:fs/promises";
 import { join } from "node:path";
 import { loadConfig } from "../config/parser.js";
-import { readFileContent, writeFile } from "../fs/utils.js";
+import { readFileContent } from "../fs/utils.js";
 import { commitChanges, pushChanges } from "../git/operations.js";
 import { askYesNo } from "../interactive/prompts.js";
-import { calculateVersion } from "../version/calculator.js";
 
 export async function endPrCommand(): Promise<void> {
 	console.log("🏁 Finalizing release and merging PR...");
