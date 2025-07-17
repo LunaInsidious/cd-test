@@ -62,7 +62,9 @@ export class CommandRouter {
 		lines.push("Available commands:");
 		lines.push("");
 
-		for (const [name, command] of this.commands) {
+		// Convert Map entries to array for iteration
+		const commandEntries = Array.from(this.commands.entries());
+		for (const [name, command] of commandEntries) {
 			lines.push(`  ${name.padEnd(12)} ${command.description}`);
 
 			if (command.subcommands) {
