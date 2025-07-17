@@ -4,7 +4,10 @@ import { promisify } from "node:util";
 const execAsync = promisify(exec);
 
 export class GitHubError extends Error {
-	constructor(message: string, public exitCode?: number) {
+	constructor(
+		message: string,
+		public exitCode?: number,
+	) {
 		super(message);
 		this.name = "GitHubError";
 	}
@@ -45,7 +48,7 @@ export async function createPullRequest(
 		const { stdout } = await execAsync(
 			`gh pr create --title "${title}" --body "${body}" --base "${baseBranch}"`,
 		);
-		
+
 		// Extract PR URL from output
 		const urlMatch = stdout.match(/https:\/\/github\.com\/[^\s]+/);
 		return urlMatch ? urlMatch[0] : stdout.trim();
@@ -162,7 +165,7 @@ export async function createRelease(
 		const { stdout } = await execAsync(
 			`gh release create "${tag}" --title "${title}" --notes "${body}" ${prereleaseFlag}`,
 		);
-		
+
 		// Extract release URL from output
 		const urlMatch = stdout.match(/https:\/\/github\.com\/[^\s]+/);
 		return urlMatch ? urlMatch[0] : stdout.trim();

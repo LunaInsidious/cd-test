@@ -7,13 +7,17 @@ import {
 	updatePackageVersion,
 	writeFile,
 } from "../fs/utils.js";
-import { commitChanges, getChangedFiles, pushChanges } from "../git/operations.js";
 import {
+	GitHubError,
 	checkExistingPR,
 	createPullRequest,
 	updatePullRequest,
-	GitHubError,
 } from "../git/github.js";
+import {
+	commitChanges,
+	getChangedFiles,
+	pushChanges,
+} from "../git/operations.js";
 import { askYesNo } from "../interactive/prompts.js";
 import { calculateNextVersion } from "../version/calculator.js";
 
@@ -93,9 +97,13 @@ export async function pushPrCommand(): Promise<void> {
 	// Handle GitHub PR creation/update
 	try {
 		const existingPR = await checkExistingPR();
-		
+
 		const prTitle = `Release ${newVersion}`;
-		const prBody = generatePRBody(newVersion, affectedProjects, trackingData.tag);
+		const prBody = generatePRBody(
+			newVersion,
+			affectedProjects,
+			trackingData.tag,
+		);
 
 		if (existingPR) {
 			console.log(`🔄 Updating existing PR: ${existingPR}`);
@@ -112,7 +120,9 @@ export async function pushPrCommand(): Promise<void> {
 	} catch (error) {
 		if (error instanceof GitHubError) {
 			console.error(`❌ GitHub CLI error: ${error.message}`);
-			console.log("💡 You can create the PR manually or fix the GitHub CLI setup");
+			console.log(
+				"💡 You can create the PR manually or fix the GitHub CLI setup",
+			);
 		} else {
 			throw error;
 		}

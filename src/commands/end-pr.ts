@@ -2,14 +2,14 @@ import { readdir, unlink } from "node:fs/promises";
 import { join } from "node:path";
 import { loadConfig } from "../config/parser.js";
 import { readFileContent } from "../fs/utils.js";
-import { commitChanges, pushChanges } from "../git/operations.js";
 import {
-	mergePullRequest,
-	getPRStatus,
-	createRelease,
 	GitHubError,
+	createRelease,
+	getPRStatus,
+	mergePullRequest,
 } from "../git/github.js";
-import { askYesNo, askChoice } from "../interactive/prompts.js";
+import { commitChanges, pushChanges } from "../git/operations.js";
+import { askChoice, askYesNo } from "../interactive/prompts.js";
 
 export async function endPrCommand(): Promise<void> {
 	console.log("🏁 Finalizing release and merging PR...");
@@ -76,7 +76,7 @@ export async function endPrCommand(): Promise<void> {
 	try {
 		const prStatus = await getPRStatus();
 		console.log(`📋 PR Status: ${prStatus.state}`);
-		
+
 		if (!prStatus.mergeable) {
 			console.warn("⚠️  PR is not mergeable. Please resolve conflicts first.");
 			return;
@@ -91,7 +91,7 @@ export async function endPrCommand(): Promise<void> {
 			for (const check of failedChecks) {
 				console.warn(`   - ${check.name}: ${check.status}`);
 			}
-			
+
 			const proceedAnyway = await askYesNo(
 				"Proceed with merge despite failing checks?",
 				false,
@@ -103,14 +103,11 @@ export async function endPrCommand(): Promise<void> {
 		}
 
 		// Choose merge method
-		const mergeMethod = await askChoice(
-			"Select merge method:",
-			[
-				{ name: "Squash and merge (recommended)", value: "squash" as const },
-				{ name: "Create merge commit", value: "merge" as const },
-				{ name: "Rebase and merge", value: "rebase" as const },
-			],
-		);
+		const mergeMethod = await askChoice("Select merge method:", [
+			{ name: "Squash and merge (recommended)", value: "squash" as const },
+			{ name: "Create merge commit", value: "merge" as const },
+			{ name: "Rebase and merge", value: "rebase" as const },
+		]);
 
 		// Merge the PR
 		console.log(`🔀 Merging PR with ${mergeMethod} method...`);
@@ -128,7 +125,7 @@ export async function endPrCommand(): Promise<void> {
 					finalVersion,
 					Object.keys(trackingData.releasedWorkspaces),
 				);
-				
+
 				const releaseUrl = await createRelease(
 					`v${finalVersion}`,
 					`Release ${finalVersion}`,
@@ -137,11 +134,12 @@ export async function endPrCommand(): Promise<void> {
 				console.log(`✅ Created GitHub release: ${releaseUrl}`);
 			}
 		}
-
 	} catch (error) {
 		if (error instanceof GitHubError) {
 			console.error(`❌ GitHub CLI error: ${error.message}`);
-			console.log("💡 You can merge the PR manually in the GitHub web interface");
+			console.log(
+				"💡 You can merge the PR manually in the GitHub web interface",
+			);
 		} else {
 			throw error;
 		}
