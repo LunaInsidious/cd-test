@@ -1,12 +1,8 @@
 import { loadConfig } from "../config/parser.js";
 import { writeFile } from "../fs/utils.js";
-import {
-	createBranch,
-	getCurrentBranch,
-	pullLatest,
-} from "../git/operations.js";
+import { createBranch, pullLatest } from "../git/operations.js";
 import { askChoice, askInput } from "../interactive/prompts.js";
-import { calculateVersion } from "../version/calculator.js";
+import { calculateNextVersion } from "../version/calculator.js";
 
 export async function startPrCommand(): Promise<void> {
 	console.log("🚀 Starting release PR...");
@@ -35,7 +31,7 @@ export async function startPrCommand(): Promise<void> {
 	const fullBranchName = `rc:${branchName}`;
 
 	// Calculate initial version
-	const newVersion = calculateVersion(
+	const newVersion = calculateNextVersion(
 		config.baseVersion,
 		selectedTag,
 		"increment",
