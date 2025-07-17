@@ -1,5 +1,10 @@
 import { CLIParseError, parseArgs } from "./parser.js";
 import { CommandRouter } from "./router.js";
+import { initCommand } from "../commands/init.js";
+import { startPrCommand } from "../commands/start-pr.js";
+import { pushPrCommand } from "../commands/push-pr.js";
+import { endPrCommand } from "../commands/end-pr.js";
+import { closePrompts } from "../interactive/prompts.js";
 
 export * from "./parser.js";
 export * from "./router.js";
@@ -24,47 +29,45 @@ export async function runCLI(argv: string[]): Promise<void> {
 			process.exit(1);
 		}
 		throw error;
+	} finally {
+		// Always close prompts interface to prevent hanging
+		closePrompts();
 	}
 }
 
 function createRouter(): CommandRouter {
 	const router = new CommandRouter();
 
-	// Register placeholder commands - will be implemented later
 	router.register({
 		name: "init",
 		description:
 			"Initialize project with GitHub workflows and default configuration",
-		handler: async (args) => {
-			console.log("Init command called with:", args);
-			console.log("This command will be implemented in the next phase");
+		handler: async () => {
+			await initCommand();
 		},
 	});
 
 	router.register({
 		name: "start-pr",
 		description: "Start a release PR with version selection",
-		handler: async (args) => {
-			console.log("Start-PR command called with:", args);
-			console.log("This command will be implemented in the next phase");
+		handler: async () => {
+			await startPrCommand();
 		},
 	});
 
 	router.register({
 		name: "push-pr",
 		description: "Update versions and create/update PR",
-		handler: async (args) => {
-			console.log("Push-PR command called with:", args);
-			console.log("This command will be implemented in the next phase");
+		handler: async () => {
+			await pushPrCommand();
 		},
 	});
 
 	router.register({
 		name: "end-pr",
 		description: "Finalize release and merge PR",
-		handler: async (args) => {
-			console.log("End-PR command called with:", args);
-			console.log("This command will be implemented in the next phase");
+		handler: async () => {
+			await endPrCommand();
 		},
 	});
 
