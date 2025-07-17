@@ -21,7 +21,7 @@ export function parseVersion(version: string): VersionInfo {
 	}
 
 	const [, majorStr, minorStr, patchStr, prerelease] = match;
-	
+
 	if (!majorStr || !minorStr || !patchStr) {
 		throw new VersionCalculationError(`Invalid version format: ${version}`);
 	}
