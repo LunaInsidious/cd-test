@@ -18,7 +18,7 @@ export function parseArgs(args: string[]): ParsedArgs {
 	}
 
 	const [command, ...rest] = args;
-	
+
 	if (!command) {
 		throw new CLIParseError("No command provided");
 	}
@@ -30,7 +30,7 @@ export function parseArgs(args: string[]): ParsedArgs {
 	let i = 0;
 	while (i < rest.length) {
 		const arg = rest[i];
-		
+
 		if (!arg) {
 			i++;
 			continue;
