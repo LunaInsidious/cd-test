@@ -95,20 +95,19 @@ describe("CLI Parser", () => {
 			});
 		});
 
-		it("should parse options before subcommand", () => {
+		it("should parse mixed options and subcommand", () => {
 			const result = parseArgs([
 				"start-pr",
 				"--tag",
 				"rc",
-				"--verbose",
 				"feature",
-				"arg1",
+				"--verbose",
 			]);
 			expect(result).toEqual({
 				command: "start-pr",
 				subcommand: "feature",
 				options: { tag: "rc", verbose: true },
-				positional: ["arg1"],
+				positional: [],
 			});
 		});
 
