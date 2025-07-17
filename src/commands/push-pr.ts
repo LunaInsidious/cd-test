@@ -7,11 +7,13 @@ import {
 	updatePackageVersion,
 	writeFile,
 } from "../fs/utils.js";
+import { commitChanges, getChangedFiles, pushChanges } from "../git/operations.js";
 import {
-	commitChanges,
-	getChangedFiles,
-	pushChanges,
-} from "../git/operations.js";
+	checkExistingPR,
+	createPullRequest,
+	updatePullRequest,
+	GitHubError,
+} from "../git/github.js";
 import { askYesNo } from "../interactive/prompts.js";
 import { calculateNextVersion } from "../version/calculator.js";
 
@@ -88,17 +90,69 @@ export async function pushPrCommand(): Promise<void> {
 	await commitChanges(commitMessage);
 	await pushChanges();
 
-	// Create PR if it doesn't exist
-	const createPR = await askYesNo("Create GitHub PR?", true);
-	if (createPR) {
-		console.log("🔗 Creating GitHub PR...");
-		// Implementation would use GitHub CLI to create PR
-		console.log(
-			"Run: gh pr create --title 'Release ${newVersion}' --body 'Automated release PR'",
-		);
+	// Handle GitHub PR creation/update
+	try {
+		const existingPR = await checkExistingPR();
+		
+		const prTitle = `Release ${newVersion}`;
+		const prBody = generatePRBody(newVersion, affectedProjects, trackingData.tag);
+
+		if (existingPR) {
+			console.log(`🔄 Updating existing PR: ${existingPR}`);
+			await updatePullRequest(prTitle, prBody);
+			console.log(`✅ Updated PR: ${existingPR}`);
+		} else {
+			const createPR = await askYesNo("Create GitHub PR?", true);
+			if (createPR) {
+				console.log("🔗 Creating GitHub PR...");
+				const prUrl = await createPullRequest(prTitle, prBody);
+				console.log(`✅ Created PR: ${prUrl}`);
+			}
+		}
+	} catch (error) {
+		if (error instanceof GitHubError) {
+			console.error(`❌ GitHub CLI error: ${error.message}`);
+			console.log("💡 You can create the PR manually or fix the GitHub CLI setup");
+		} else {
+			throw error;
+		}
 	}
 
 	console.log("✅ Push PR completed successfully!");
+}
+
+function generatePRBody(
+	version: string,
+	affectedProjects: Array<{ path: string; type: string; registries: string[] }>,
+	tag: string,
+): string {
+	const projectList = affectedProjects
+		.map((p) => `- **${p.path}** (${p.type}) → ${version}`)
+		.join("\n");
+
+	return `## Release ${version}
+
+### Changes
+This PR updates project versions to \`${version}\` with tag \`${tag}\`.
+
+### Updated Projects
+${projectList}
+
+### Release Process
+1. ✅ Version numbers updated
+2. ⏳ CI checks must pass
+3. ⏳ Ready for merge with \`cd-tools end-pr\`
+
+### Registry Deployments
+After merge, the following registries will be updated:
+${affectedProjects
+	.flatMap((p) => p.registries)
+	.filter((r, i, arr) => arr.indexOf(r) === i)
+	.map((registry) => `- ${registry}`)
+	.join("\n")}
+
+---
+*This PR was created automatically by cd-tools*`;
 }
 
 async function findTrackingFile(): Promise<string | null> {
