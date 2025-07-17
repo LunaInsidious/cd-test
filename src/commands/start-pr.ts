@@ -1,8 +1,12 @@
 import { loadConfig } from "../config/parser.js";
-import { calculateVersion } from "../version/calculator.js";
-import { createBranch, getCurrentBranch, pullLatest } from "../git/operations.js";
-import { askChoice, askInput } from "../interactive/prompts.js";
 import { writeFile } from "../fs/utils.js";
+import {
+	createBranch,
+	getCurrentBranch,
+	pullLatest,
+} from "../git/operations.js";
+import { askChoice, askInput } from "../interactive/prompts.js";
+import { calculateVersion } from "../version/calculator.js";
 
 export async function startPrCommand(): Promise<void> {
 	console.log("🚀 Starting release PR...");
@@ -31,8 +35,12 @@ export async function startPrCommand(): Promise<void> {
 	const fullBranchName = `rc:${branchName}`;
 
 	// Calculate initial version
-	const newVersion = calculateVersion(config.baseVersion, selectedTag, "increment");
-	
+	const newVersion = calculateVersion(
+		config.baseVersion,
+		selectedTag,
+		"increment",
+	);
+
 	console.log(`🏷️  Target version: ${newVersion}`);
 
 	// Create and checkout new branch
@@ -50,7 +58,10 @@ export async function startPrCommand(): Promise<void> {
 		createdAt: new Date().toISOString(),
 	};
 
-	await writeFile(`.cdtools/${trackingFileName}`, JSON.stringify(trackingData, null, 2));
+	await writeFile(
+		`.cdtools/${trackingFileName}`,
+		JSON.stringify(trackingData, null, 2),
+	);
 	console.log(`📝 Created tracking file: .cdtools/${trackingFileName}`);
 
 	console.log("✅ Release PR started successfully!");

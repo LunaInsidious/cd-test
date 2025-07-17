@@ -1,4 +1,4 @@
-import { mkdir, readFile, writeFile as fsWriteFile } from "node:fs/promises";
+import { writeFile as fsWriteFile, mkdir, readFile } from "node:fs/promises";
 import { dirname } from "node:path";
 
 /**
@@ -18,7 +18,10 @@ export async function ensureDir(path: string): Promise<void> {
 /**
  * Write content to a file, ensuring the directory exists
  */
-export async function writeFile(filePath: string, content: string): Promise<void> {
+export async function writeFile(
+	filePath: string,
+	content: string,
+): Promise<void> {
 	const dir = dirname(filePath);
 	await ensureDir(dir);
 	await fsWriteFile(filePath, content, "utf8");
@@ -53,15 +56,15 @@ export async function updateCargoVersion(
 ): Promise<void> {
 	const content = await readFileContent(cargoPath);
 	const lines = content.split("\n");
-	
+
 	for (let i = 0; i < lines.length; i++) {
 		const line = lines[i];
-		if (line && line.startsWith("version = ")) {
+		if (line?.startsWith("version = ")) {
 			lines[i] = `version = "${newVersion}"`;
 			break;
 		}
 	}
-	
+
 	await writeFile(cargoPath, lines.join("\n"));
 }
 

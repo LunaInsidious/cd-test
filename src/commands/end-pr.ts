@@ -1,10 +1,10 @@
-import { loadConfig } from "../config/parser.js";
-import { calculateVersion } from "../version/calculator.js";
-import { commitChanges, pushChanges } from "../git/operations.js";
-import { askYesNo } from "../interactive/prompts.js";
-import { readFileContent, writeFile } from "../fs/utils.js";
 import { readdir, unlink } from "node:fs/promises";
 import { join } from "node:path";
+import { loadConfig } from "../config/parser.js";
+import { readFileContent, writeFile } from "../fs/utils.js";
+import { commitChanges, pushChanges } from "../git/operations.js";
+import { askYesNo } from "../interactive/prompts.js";
+import { calculateVersion } from "../version/calculator.js";
 
 export async function endPrCommand(): Promise<void> {
 	console.log("🏁 Finalizing release and merging PR...");
@@ -28,12 +28,15 @@ export async function endPrCommand(): Promise<void> {
 	};
 
 	// Check if there's a "next" version to release
-	const versionTagConfig = config.versionTags.find(tag => Object.keys(tag)[0] === trackingData.tag);
+	const versionTagConfig = config.versionTags.find(
+		(tag) => Object.keys(tag)[0] === trackingData.tag,
+	);
 	if (!versionTagConfig) {
 		throw new Error(`Version tag configuration not found: ${trackingData.tag}`);
 	}
 
-	const tagConfig = versionTagConfig[trackingData.tag as keyof typeof versionTagConfig];
+	const tagConfig =
+		versionTagConfig[trackingData.tag as keyof typeof versionTagConfig];
 	if (!tagConfig || typeof tagConfig !== "object") {
 		throw new Error(`Invalid tag configuration for: ${trackingData.tag}`);
 	}
@@ -46,8 +49,10 @@ export async function endPrCommand(): Promise<void> {
 		console.log(`🎯 Creating stable release: ${finalVersion}`);
 
 		// Update all released workspaces to stable version
-		for (const [projectPath] of Object.entries(trackingData.releasedWorkspaces)) {
-			const project = config.projects.find(p => p.path === projectPath);
+		for (const [projectPath] of Object.entries(
+			trackingData.releasedWorkspaces,
+		)) {
+			const project = config.projects.find((p) => p.path === projectPath);
 			if (project) {
 				await updateProjectVersion(project, finalVersion);
 				console.log(`✅ Updated ${projectPath} to stable ${finalVersion}`);
@@ -63,7 +68,10 @@ export async function endPrCommand(): Promise<void> {
 	}
 
 	// Clean up tracking file
-	const confirmCleanup = await askYesNo("Delete tracking file and finalize release?", true);
+	const confirmCleanup = await askYesNo(
+		"Delete tracking file and finalize release?",
+		true,
+	);
 	if (confirmCleanup) {
 		await unlink(trackingFile);
 		await commitChanges("chore: cleanup release tracking file");
@@ -84,7 +92,9 @@ export async function endPrCommand(): Promise<void> {
 async function findTrackingFile(): Promise<string | null> {
 	try {
 		const files = await readdir(".cdtools");
-		const trackingFile = files.find(f => f.includes("_") && f.endsWith(".json"));
+		const trackingFile = files.find(
+			(f) => f.includes("_") && f.endsWith(".json"),
+		);
 		return trackingFile ? `.cdtools/${trackingFile}` : null;
 	} catch {
 		return null;
@@ -95,8 +105,10 @@ async function updateProjectVersion(
 	project: { path: string; type: string },
 	newVersion: string,
 ): Promise<void> {
-	const { updatePackageVersion, updateCargoVersion } = await import("../fs/utils.js");
-	
+	const { updatePackageVersion, updateCargoVersion } = await import(
+		"../fs/utils.js"
+	);
+
 	switch (project.type) {
 		case "typescript": {
 			const packageJsonPath = join(project.path, "package.json");
@@ -109,6 +121,8 @@ async function updateProjectVersion(
 			break;
 		}
 		default:
-			console.log(`⚠️  Unknown project type: ${project.type}, skipping version update`);
+			console.log(
+				`⚠️  Unknown project type: ${project.type}, skipping version update`,
+			);
 	}
 }

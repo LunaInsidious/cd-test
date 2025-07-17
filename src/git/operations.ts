@@ -31,8 +31,12 @@ export async function pullLatest(): Promise<void> {
 export async function getChangedFiles(baseBranch = "main"): Promise<string[]> {
 	try {
 		// Try to get merge base first (for comparing feature branches)
-		const { stdout: mergeBase } = await execAsync(`git merge-base ${baseBranch} HEAD`);
-		const { stdout } = await execAsync(`git diff ${mergeBase.trim()} --name-only`);
+		const { stdout: mergeBase } = await execAsync(
+			`git merge-base ${baseBranch} HEAD`,
+		);
+		const { stdout } = await execAsync(
+			`git diff ${mergeBase.trim()} --name-only`,
+		);
 		return stdout.trim() ? stdout.trim().split("\n") : [];
 	} catch {
 		// Fallback to simple diff if merge-base fails
