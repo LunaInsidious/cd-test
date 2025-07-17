@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { configSchema, type Config } from "./schema.js";
+import { type Config, configSchema } from "./schema.js";
 
 export class ConfigParseError extends Error {
 	constructor(
