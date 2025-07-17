@@ -1,5 +1,5 @@
 import { ensureDir, writeFile } from "../fs/utils.js";
-import { askYesNo, askMultipleChoice } from "../interactive/prompts.js";
+import { askMultipleChoice, askYesNo } from "../interactive/prompts.js";
 
 interface WorkflowTemplate {
 	name: string;
