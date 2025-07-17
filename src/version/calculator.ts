@@ -42,7 +42,7 @@ export function generateTimestampSuffix(): string {
 	const hour = String(now.getHours()).padStart(2, "0");
 	const minute = String(now.getMinutes()).padStart(2, "0");
 	const second = String(now.getSeconds()).padStart(2, "0");
-	
+
 	return `${year}${month}${day}${hour}${minute}${second}`;
 }
 
@@ -53,7 +53,7 @@ export function calculateNextVersion(
 	currentVersion?: string,
 ): string {
 	const base = parseVersion(baseVersion);
-	
+
 	// For stable version, increment patch
 	if (tag === "stable") {
 		return formatVersion({

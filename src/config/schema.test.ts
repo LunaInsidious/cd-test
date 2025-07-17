@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, expect, it } from "vitest";
 import { configSchema } from "./schema.js";
 
 describe("Config Schema Validation", () => {
@@ -31,7 +31,8 @@ describe("Config Schema Validation", () => {
 		],
 		releaseNotes: {
 			enabled: true,
-			template: "## Changes\\n\\n{{changes}}\\n\\n## Contributors\\n\\n{{contributors}}",
+			template:
+				"## Changes\\n\\n{{changes}}\\n\\n## Contributors\\n\\n{{contributors}}",
 		},
 	};
 

@@ -1,7 +1,12 @@
-import { describe, it, expect, beforeEach, afterEach } from "vitest";
-import { writeFileSync, mkdirSync, rmSync } from "node:fs";
+import { mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { parseConfig, loadConfig, validateConfig, ConfigParseError } from "./parser.js";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import {
+	ConfigParseError,
+	loadConfig,
+	parseConfig,
+	validateConfig,
+} from "./parser.js";
 
 describe("Config Parser", () => {
 	const testDir = join(process.cwd(), "test-temp");
