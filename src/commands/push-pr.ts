@@ -7,14 +7,9 @@ import {
 	updatePackageVersion,
 	writeFile,
 } from "../fs/utils.js";
-import {
-	commitChanges,
-	getChangedFiles,
-	getCurrentBranch,
-	pushChanges,
-} from "../git/operations.js";
-import { askChoice, askYesNo } from "../interactive/prompts.js";
-import { calculateVersion } from "../version/calculator.js";
+import { commitChanges, getChangedFiles, pushChanges } from "../git/operations.js";
+import { askYesNo } from "../interactive/prompts.js";
+import { calculateNextVersion } from "../version/calculator.js";
 
 export async function pushPrCommand(): Promise<void> {
 	console.log("🔄 Updating versions and preparing PR...");
@@ -64,7 +59,7 @@ export async function pushPrCommand(): Promise<void> {
 		throw new Error(`Invalid tag configuration for: ${trackingData.tag}`);
 	}
 
-	const newVersion = calculateVersion(
+	const newVersion = calculateNextVersion(
 		config.baseVersion,
 		trackingData.tag,
 		tagConfig.versionSuffixStrategy,
