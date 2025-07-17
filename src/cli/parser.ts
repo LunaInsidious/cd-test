@@ -1,6 +1,6 @@
 export interface ParsedArgs {
 	command: string;
-	subcommand?: string;
+	subcommand: string | undefined;
 	options: Record<string, string | boolean>;
 	positional: string[];
 }
@@ -25,7 +25,7 @@ export function parseArgs(args: string[]): ParsedArgs {
 
 	const options: Record<string, string | boolean> = {};
 	const positional: string[] = [];
-	let subcommand: string | undefined;
+	let subcommand: string | undefined = undefined;
 
 	let i = 0;
 	while (i < rest.length) {
@@ -68,7 +68,7 @@ export function parseArgs(args: string[]): ParsedArgs {
 			}
 		}
 		// First positional argument after command is subcommand
-		else if (!subcommand) {
+		else if (subcommand === undefined) {
 			subcommand = arg;
 		}
 		// Rest are positional arguments
