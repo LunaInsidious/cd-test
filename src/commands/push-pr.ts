@@ -7,7 +7,11 @@ import {
 	updatePackageVersion,
 	writeFile,
 } from "../fs/utils.js";
-import { commitChanges, getChangedFiles, pushChanges } from "../git/operations.js";
+import {
+	commitChanges,
+	getChangedFiles,
+	pushChanges,
+} from "../git/operations.js";
 import { askYesNo } from "../interactive/prompts.js";
 import { calculateNextVersion } from "../version/calculator.js";
 
