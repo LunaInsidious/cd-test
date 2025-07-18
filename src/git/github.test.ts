@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 // Mock exec completely to prevent any actual command execution
 vi.mock("node:child_process", () => ({
@@ -6,6 +6,7 @@ vi.mock("node:child_process", () => ({
 }));
 
 vi.mock("node:util", () => ({
+	// biome-ignore lint/suspicious/noExplicitAny: Required for mocking promisify function signature
 	promisify: vi.fn((fn: any) => fn),
 }));
 
@@ -58,7 +59,9 @@ describe("git/github", () => {
 
 		it("should return null when no PR exists", async () => {
 			mockExec.mockImplementation((cmd, callback) => {
-				callback(new Error("no open pull request"), { stderr: "no open pull request" });
+				callback(new Error("no open pull request"), {
+					stderr: "no open pull request",
+				});
 			});
 
 			const result = await checkExistingPR();
@@ -67,7 +70,9 @@ describe("git/github", () => {
 
 		it("should throw GitHubError for other errors", async () => {
 			mockExec.mockImplementation((cmd, callback) => {
-				callback(new Error("authentication failed"), { stderr: "authentication failed" });
+				callback(new Error("authentication failed"), {
+					stderr: "authentication failed",
+				});
 			});
 
 			await expect(checkExistingPR()).rejects.toThrow(GitHubError);
@@ -96,7 +101,10 @@ describe("git/github", () => {
 				callback(null, { stdout: "https://github.com/user/repo/pull/42\n" });
 			});
 
-			await createPullRequest('Title with "quotes"', 'Body with $special chars');
+			await createPullRequest(
+				'Title with "quotes"',
+				"Body with $special chars",
+			);
 			expect(mockExec).toHaveBeenCalledWith(
 				expect.stringContaining("gh pr create"),
 				expect.any(Function),
@@ -108,7 +116,9 @@ describe("git/github", () => {
 				callback(new Error("failed to create"), { stderr: "failed to create" });
 			});
 
-			await expect(createPullRequest("Test", "Body")).rejects.toThrow(GitHubError);
+			await expect(createPullRequest("Test", "Body")).rejects.toThrow(
+				GitHubError,
+			);
 		});
 	});
 
@@ -130,7 +140,9 @@ describe("git/github", () => {
 				callback(new Error("failed to update"), { stderr: "failed to update" });
 			});
 
-			await expect(updatePullRequest("Test", "Body")).rejects.toThrow(GitHubError);
+			await expect(updatePullRequest("Test", "Body")).rejects.toThrow(
+				GitHubError,
+			);
 		});
 	});
 
@@ -177,7 +189,9 @@ describe("git/github", () => {
 
 		it("should throw GitHubError on failure", async () => {
 			mockExec.mockImplementation((cmd, callback) => {
-				callback(new Error("failed to get status"), { stderr: "failed to get status" });
+				callback(new Error("failed to get status"), {
+					stderr: "failed to get status",
+				});
 			});
 
 			await expect(getPRStatus()).rejects.toThrow(GitHubError);
@@ -234,11 +248,17 @@ describe("git/github", () => {
 		it("should create release and return URL", async () => {
 			mockExec.mockImplementation((cmd, callback) => {
 				if (cmd.includes("gh release create")) {
-					callback(null, { stdout: "https://github.com/user/repo/releases/tag/v1.0.0\n" });
+					callback(null, {
+						stdout: "https://github.com/user/repo/releases/tag/v1.0.0\n",
+					});
 				}
 			});
 
-			const result = await createRelease("v1.0.0", "Release 1.0.0", "Release notes");
+			const result = await createRelease(
+				"v1.0.0",
+				"Release 1.0.0",
+				"Release notes",
+			);
 			expect(result).toBe("https://github.com/user/repo/releases/tag/v1.0.0");
 			expect(mockExec).toHaveBeenCalledWith(
 				expect.stringContaining("gh release create"),
@@ -248,7 +268,9 @@ describe("git/github", () => {
 
 		it("should handle special characters in notes", async () => {
 			mockExec.mockImplementation((cmd, callback) => {
-				callback(null, { stdout: "https://github.com/user/repo/releases/tag/v1.0.0\n" });
+				callback(null, {
+					stdout: "https://github.com/user/repo/releases/tag/v1.0.0\n",
+				});
 			});
 
 			await createRelease("v1.0.0", "Release", 'Notes with "quotes" and $vars');
@@ -260,10 +282,14 @@ describe("git/github", () => {
 
 		it("should throw GitHubError on failure", async () => {
 			mockExec.mockImplementation((cmd, callback) => {
-				callback(new Error("failed to create release"), { stderr: "failed to create release" });
+				callback(new Error("failed to create release"), {
+					stderr: "failed to create release",
+				});
 			});
 
-			await expect(createRelease("v1.0.0", "Release", "Notes")).rejects.toThrow(GitHubError);
+			await expect(createRelease("v1.0.0", "Release", "Notes")).rejects.toThrow(
+				GitHubError,
+			);
 		});
 	});
 });
