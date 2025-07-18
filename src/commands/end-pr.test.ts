@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { endPrCommand } from "./end-pr.js";
+import type { Config } from "../config/schema.js";
 
 // Mock all external dependencies
 vi.mock("node:fs/promises", () => ({
@@ -53,7 +54,7 @@ import { commitChanges, pushChanges } from "../git/operations.js";
 import { askChoice, askYesNo } from "../interactive/prompts.js";
 
 describe("endPrCommand", () => {
-	const mockConfig = {
+	const mockConfig: Config = {
 		baseVersion: "1.0.0",
 		versionTags: [
 			{
@@ -173,7 +174,7 @@ describe("endPrCommand", () => {
 
 		it("should complete end-pr without stable release when no next config", async () => {
 			// Mock config without "next" property
-			const configWithoutNext = {
+			const configWithoutNext: Config = {
 				...mockConfig,
 				versionTags: [
 					{
@@ -384,7 +385,7 @@ describe("endPrCommand", () => {
 				versionTags: [
 					{
 						rc: {
-							versionSuffixStrategy: "increment",
+							versionSuffixStrategy: "increment" as const,
 							next: "stable",
 						},
 					},
@@ -392,8 +393,8 @@ describe("endPrCommand", () => {
 				projects: [
 					{
 						path: "./unknown",
-						type: "unknown",
-						registries: ["custom"],
+						type: "unknown" as const,
+						registries: ["custom" as const],
 					},
 				],
 			};
