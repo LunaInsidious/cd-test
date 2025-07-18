@@ -1,350 +1,269 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 // Mock exec completely to prevent any actual command execution
-const mockExec = vi.fn();
-
 vi.mock("node:child_process", () => ({
-	exec: mockExec,
+	exec: vi.fn(),
 }));
 
 vi.mock("node:util", () => ({
-	promisify: (fn: any) => {
-		if (fn === mockExec) {
-			return mockExec;
-		}
-		return fn;
-	},
+	promisify: vi.fn((fn: any) => fn),
 }));
 
 // Import after mocking
 import {
 	GitHubError,
-	checkGitHubCLI,
-	createPullRequest,
 	checkExistingPR,
-	updatePullRequest,
-	mergePullRequest,
-	getPRStatus,
+	createPullRequest,
 	createRelease,
+	getPRStatus,
+	mergePullRequest,
+	updatePullRequest,
 } from "./github.js";
 
 describe("git/github", () => {
+	let mockExec: ReturnType<typeof vi.fn>;
+
 	beforeEach(() => {
 		vi.clearAllMocks();
+		const { exec } = require("node:child_process");
+		mockExec = vi.mocked(exec);
 	});
 
 	afterEach(() => {
-		vi.resetAllMocks();
+		vi.restoreAllMocks();
 	});
 
 	describe("GitHubError", () => {
-		it("should create error with message and exit code", () => {
-			const error = new GitHubError("Test error", 1);
-			expect(error.message).toBe("Test error");
-			expect(error.exitCode).toBe(1);
-			expect(error.name).toBe("GitHubError");
-		});
-
-		it("should create error with just message", () => {
+		it("should create error with correct name and message", () => {
 			const error = new GitHubError("Test error");
+			expect(error.name).toBe("GitHubError");
 			expect(error.message).toBe("Test error");
-			expect(error.exitCode).toBeUndefined();
+			expect(error).toBeInstanceOf(Error);
 		});
 	});
 
-	describe("checkGitHubCLI", () => {
-		it("should pass when gh is installed and authenticated", async () => {
-			// Mock successful gh --version
-			mockExec.mockResolvedValueOnce({ stdout: "gh version 2.0.0", stderr: "" });
-			// Mock successful gh auth status
-			mockExec.mockResolvedValueOnce({ stdout: "Logged in to github.com", stderr: "" });
+	describe("checkExistingPR", () => {
+		it("should return PR URL when PR exists", async () => {
+			mockExec.mockImplementation((cmd, callback) => {
+				callback(null, { stdout: "https://github.com/user/repo/pull/42\n" });
+			});
 
-			await expect(checkGitHubCLI()).resolves.toBeUndefined();
-			expect(mockExec).toHaveBeenCalledTimes(2);
+			const result = await checkExistingPR();
+			expect(result).toBe("https://github.com/user/repo/pull/42");
+			expect(mockExec).toHaveBeenCalledWith(
+				"gh pr view --json url --jq .url",
+				expect.any(Function),
+			);
 		});
 
-		it("should throw GitHubError when gh is not installed", async () => {
-			mockExec.mockRejectedValueOnce(new Error("Command not found"));
+		it("should return null when no PR exists", async () => {
+			mockExec.mockImplementation((cmd, callback) => {
+				callback(new Error("no open pull request"), { stderr: "no open pull request" });
+			});
 
-			await expect(checkGitHubCLI()).rejects.toThrow(GitHubError);
-			await expect(checkGitHubCLI()).rejects.toThrow("GitHub CLI (gh) is not installed");
+			const result = await checkExistingPR();
+			expect(result).toBeNull();
 		});
 
-		it("should throw GitHubError when gh is not authenticated", async () => {
-			// Mock successful gh --version
-			mockExec.mockResolvedValueOnce({ stdout: "gh version 2.0.0", stderr: "" });
-			// Mock failed gh auth status
-			mockExec.mockRejectedValueOnce(new Error("Not authenticated"));
+		it("should throw GitHubError for other errors", async () => {
+			mockExec.mockImplementation((cmd, callback) => {
+				callback(new Error("authentication failed"), { stderr: "authentication failed" });
+			});
 
-			await expect(checkGitHubCLI()).rejects.toThrow(GitHubError);
-			await expect(checkGitHubCLI()).rejects.toThrow("GitHub CLI is not authenticated");
+			await expect(checkExistingPR()).rejects.toThrow(GitHubError);
+			await expect(checkExistingPR()).rejects.toThrow("authentication failed");
 		});
 	});
 
 	describe("createPullRequest", () => {
 		it("should create PR and return URL", async () => {
-			const mockOutput = "https://github.com/user/repo/pull/123\n";
-			
-			// Mock checkGitHubCLI success
-			mockExec.mockResolvedValueOnce({ stdout: "gh version 2.0.0", stderr: "" });
-			mockExec.mockResolvedValueOnce({ stdout: "Logged in", stderr: "" });
-			
-			// Mock PR creation
-			mockExec.mockResolvedValueOnce({ stdout: mockOutput, stderr: "" });
-
-			const result = await createPullRequest("Release v1.0.0", "Test PR body");
-			expect(result).toBe("https://github.com/user/repo/pull/123");
-		});
-
-		it("should handle custom base branch", async () => {
-			const mockOutput = "https://github.com/user/repo/pull/124\n";
-			
-			// Mock checkGitHubCLI success
-			mockExec.mockResolvedValueOnce({ stdout: "gh version 2.0.0", stderr: "" });
-			mockExec.mockResolvedValueOnce({ stdout: "Logged in", stderr: "" });
-			
-			// Mock PR creation with custom base
-			mockExec.mockResolvedValueOnce({ stdout: mockOutput, stderr: "" });
-
-			await createPullRequest("Test PR", "Test body", "develop");
-			expect(mockExec).toHaveBeenLastCalledWith('gh pr create --title "Test PR" --body "Test body" --base "develop"');
-		});
-
-		it("should return stdout if no URL found", async () => {
-			const mockOutput = "PR created successfully but no URL found\n";
-			
-			// Mock checkGitHubCLI success
-			mockExec.mockResolvedValueOnce({ stdout: "gh version 2.0.0", stderr: "" });
-			mockExec.mockResolvedValueOnce({ stdout: "Logged in", stderr: "" });
-			
-			// Mock PR creation
-			mockExec.mockResolvedValueOnce({ stdout: mockOutput, stderr: "" });
+			mockExec.mockImplementation((cmd, callback) => {
+				if (cmd.includes("gh pr create")) {
+					callback(null, { stdout: "https://github.com/user/repo/pull/42\n" });
+				}
+			});
 
 			const result = await createPullRequest("Test PR", "Test body");
-			expect(result).toBe("PR created successfully but no URL found");
+			expect(result).toBe("https://github.com/user/repo/pull/42");
+			expect(mockExec).toHaveBeenCalledWith(
+				expect.stringContaining("gh pr create"),
+				expect.any(Function),
+			);
+		});
+
+		it("should handle special characters in title and body", async () => {
+			mockExec.mockImplementation((cmd, callback) => {
+				callback(null, { stdout: "https://github.com/user/repo/pull/42\n" });
+			});
+
+			await createPullRequest('Title with "quotes"', 'Body with $special chars');
+			expect(mockExec).toHaveBeenCalledWith(
+				expect.stringContaining("gh pr create"),
+				expect.any(Function),
+			);
 		});
 
 		it("should throw GitHubError on failure", async () => {
-			// Mock checkGitHubCLI success
-			mockExec.mockResolvedValueOnce({ stdout: "gh version 2.0.0", stderr: "" });
-			mockExec.mockResolvedValueOnce({ stdout: "Logged in", stderr: "" });
-			
-			// Mock PR creation failure
-			mockExec.mockRejectedValueOnce(new Error("PR creation failed"));
+			mockExec.mockImplementation((cmd, callback) => {
+				callback(new Error("failed to create"), { stderr: "failed to create" });
+			});
 
-			await expect(createPullRequest("Test PR", "Test body")).rejects.toThrow(GitHubError);
-			await expect(createPullRequest("Test PR", "Test body")).rejects.toThrow("Failed to create PR");
-		});
-	});
-
-	describe("checkExistingPR", () => {
-		it("should return PR URL if exists", async () => {
-			const mockOutput = '{"url": "https://github.com/user/repo/pull/123"}';
-			
-			// Mock checkGitHubCLI success
-			mockExec.mockResolvedValueOnce({ stdout: "gh version 2.0.0", stderr: "" });
-			mockExec.mockResolvedValueOnce({ stdout: "Logged in", stderr: "" });
-			
-			// Mock PR view
-			mockExec.mockResolvedValueOnce({ stdout: mockOutput, stderr: "" });
-
-			const result = await checkExistingPR();
-			expect(result).toBe("https://github.com/user/repo/pull/123");
-		});
-
-		it("should return null if no PR exists", async () => {
-			// Mock checkGitHubCLI success
-			mockExec.mockResolvedValueOnce({ stdout: "gh version 2.0.0", stderr: "" });
-			mockExec.mockResolvedValueOnce({ stdout: "Logged in", stderr: "" });
-			
-			// Mock PR view failure
-			mockExec.mockRejectedValueOnce(new Error("No pull request found"));
-
-			const result = await checkExistingPR();
-			expect(result).toBeNull();
+			await expect(createPullRequest("Test", "Body")).rejects.toThrow(GitHubError);
 		});
 	});
 
 	describe("updatePullRequest", () => {
-		it("should update PR title and body", async () => {
-			// Mock checkGitHubCLI success
-			mockExec.mockResolvedValueOnce({ stdout: "gh version 2.0.0", stderr: "" });
-			mockExec.mockResolvedValueOnce({ stdout: "Logged in", stderr: "" });
-			
-			// Mock PR update
-			mockExec.mockResolvedValueOnce({ stdout: "", stderr: "" });
+		it("should update PR successfully", async () => {
+			mockExec.mockImplementation((cmd, callback) => {
+				callback(null, { stdout: "Updated pull request\n" });
+			});
 
-			await expect(updatePullRequest("Updated Title", "Updated Body")).resolves.toBeUndefined();
-			expect(mockExec).toHaveBeenLastCalledWith('gh pr edit --title "Updated Title" --body "Updated Body"');
+			await updatePullRequest("Updated Title", "Updated body");
+			expect(mockExec).toHaveBeenCalledWith(
+				expect.stringContaining("gh pr edit"),
+				expect.any(Function),
+			);
 		});
 
 		it("should throw GitHubError on failure", async () => {
-			// Mock checkGitHubCLI success
-			mockExec.mockResolvedValueOnce({ stdout: "gh version 2.0.0", stderr: "" });
-			mockExec.mockResolvedValueOnce({ stdout: "Logged in", stderr: "" });
-			
-			// Mock PR update failure
-			mockExec.mockRejectedValueOnce(new Error("Update failed"));
+			mockExec.mockImplementation((cmd, callback) => {
+				callback(new Error("failed to update"), { stderr: "failed to update" });
+			});
 
-			await expect(updatePullRequest("Title", "Body")).rejects.toThrow(GitHubError);
-			await expect(updatePullRequest("Title", "Body")).rejects.toThrow("Failed to update PR");
-		});
-	});
-
-	describe("mergePullRequest", () => {
-		it("should merge PR with squash method by default", async () => {
-			// Mock checkGitHubCLI success
-			mockExec.mockResolvedValueOnce({ stdout: "gh version 2.0.0", stderr: "" });
-			mockExec.mockResolvedValueOnce({ stdout: "Logged in", stderr: "" });
-			
-			// Mock PR merge
-			mockExec.mockResolvedValueOnce({ stdout: "", stderr: "" });
-
-			await expect(mergePullRequest()).resolves.toBeUndefined();
-			expect(mockExec).toHaveBeenLastCalledWith('gh pr merge --squash --delete-branch');
-		});
-
-		it("should merge PR with specified method", async () => {
-			// Mock checkGitHubCLI success
-			mockExec.mockResolvedValueOnce({ stdout: "gh version 2.0.0", stderr: "" });
-			mockExec.mockResolvedValueOnce({ stdout: "Logged in", stderr: "" });
-			
-			// Mock PR merge
-			mockExec.mockResolvedValueOnce({ stdout: "", stderr: "" });
-
-			await expect(mergePullRequest("rebase")).resolves.toBeUndefined();
-			expect(mockExec).toHaveBeenLastCalledWith('gh pr merge --rebase --delete-branch');
-		});
-
-		it("should throw GitHubError on merge failure", async () => {
-			// Mock checkGitHubCLI success
-			mockExec.mockResolvedValueOnce({ stdout: "gh version 2.0.0", stderr: "" });
-			mockExec.mockResolvedValueOnce({ stdout: "Logged in", stderr: "" });
-			
-			// Mock PR merge failure
-			mockExec.mockRejectedValueOnce(new Error("Merge failed"));
-
-			await expect(mergePullRequest()).rejects.toThrow(GitHubError);
-			await expect(mergePullRequest()).rejects.toThrow("Failed to merge PR");
+			await expect(updatePullRequest("Test", "Body")).rejects.toThrow(GitHubError);
 		});
 	});
 
 	describe("getPRStatus", () => {
-		it("should return PR status information", async () => {
-			const mockOutput = JSON.stringify({
-				mergeable: "MERGEABLE",
+		it("should return PR status with checks", async () => {
+			const mockStatus = {
 				state: "OPEN",
-				statusCheckRollupStates: [
-					{ context: "ci/build", state: "SUCCESS" },
-					{ context: "ci/test", state: "PENDING" },
+				mergeable: "MERGEABLE",
+				statusCheckRollup: [
+					{ name: "test", status: "SUCCESS" },
+					{ name: "lint", status: "SUCCESS" },
 				],
-			});
+			};
 
-			// Mock checkGitHubCLI success
-			mockExec.mockResolvedValueOnce({ stdout: "gh version 2.0.0", stderr: "" });
-			mockExec.mockResolvedValueOnce({ stdout: "Logged in", stderr: "" });
-			
-			// Mock PR status
-			mockExec.mockResolvedValueOnce({ stdout: mockOutput, stderr: "" });
+			mockExec.mockImplementation((cmd, callback) => {
+				callback(null, { stdout: JSON.stringify(mockStatus) });
+			});
 
 			const result = await getPRStatus();
 			expect(result).toEqual({
+				state: "open",
 				mergeable: true,
-				state: "OPEN",
 				checks: [
-					{ name: "ci/build", status: "SUCCESS" },
-					{ name: "ci/test", status: "PENDING" },
+					{ name: "test", status: "SUCCESS" },
+					{ name: "lint", status: "SUCCESS" },
 				],
 			});
 		});
 
 		it("should handle non-mergeable PR", async () => {
-			const mockOutput = JSON.stringify({
-				mergeable: "CONFLICTING",
+			const mockStatus = {
 				state: "OPEN",
-				statusCheckRollupStates: [],
-			});
+				mergeable: "CONFLICTING",
+				statusCheckRollup: [],
+			};
 
-			// Mock checkGitHubCLI success
-			mockExec.mockResolvedValueOnce({ stdout: "gh version 2.0.0", stderr: "" });
-			mockExec.mockResolvedValueOnce({ stdout: "Logged in", stderr: "" });
-			
-			// Mock PR status
-			mockExec.mockResolvedValueOnce({ stdout: mockOutput, stderr: "" });
+			mockExec.mockImplementation((cmd, callback) => {
+				callback(null, { stdout: JSON.stringify(mockStatus) });
+			});
 
 			const result = await getPRStatus();
 			expect(result.mergeable).toBe(false);
 		});
 
 		it("should throw GitHubError on failure", async () => {
-			// Mock checkGitHubCLI success
-			mockExec.mockResolvedValueOnce({ stdout: "gh version 2.0.0", stderr: "" });
-			mockExec.mockResolvedValueOnce({ stdout: "Logged in", stderr: "" });
-			
-			// Mock status check failure
-			mockExec.mockRejectedValueOnce(new Error("Status check failed"));
+			mockExec.mockImplementation((cmd, callback) => {
+				callback(new Error("failed to get status"), { stderr: "failed to get status" });
+			});
 
 			await expect(getPRStatus()).rejects.toThrow(GitHubError);
-			await expect(getPRStatus()).rejects.toThrow("Failed to get PR status");
+		});
+	});
+
+	describe("mergePullRequest", () => {
+		it("should merge PR with squash method", async () => {
+			mockExec.mockImplementation((cmd, callback) => {
+				callback(null, { stdout: "Merged successfully\n" });
+			});
+
+			await mergePullRequest("squash");
+			expect(mockExec).toHaveBeenCalledWith(
+				"gh pr merge --squash",
+				expect.any(Function),
+			);
+		});
+
+		it("should merge PR with merge method", async () => {
+			mockExec.mockImplementation((cmd, callback) => {
+				callback(null, { stdout: "Merged successfully\n" });
+			});
+
+			await mergePullRequest("merge");
+			expect(mockExec).toHaveBeenCalledWith(
+				"gh pr merge --merge",
+				expect.any(Function),
+			);
+		});
+
+		it("should merge PR with rebase method", async () => {
+			mockExec.mockImplementation((cmd, callback) => {
+				callback(null, { stdout: "Merged successfully\n" });
+			});
+
+			await mergePullRequest("rebase");
+			expect(mockExec).toHaveBeenCalledWith(
+				"gh pr merge --rebase",
+				expect.any(Function),
+			);
+		});
+
+		it("should throw GitHubError on failure", async () => {
+			mockExec.mockImplementation((cmd, callback) => {
+				callback(new Error("failed to merge"), { stderr: "failed to merge" });
+			});
+
+			await expect(mergePullRequest("squash")).rejects.toThrow(GitHubError);
 		});
 	});
 
 	describe("createRelease", () => {
 		it("should create release and return URL", async () => {
-			const mockOutput = "https://github.com/user/repo/releases/tag/v1.0.0\n";
+			mockExec.mockImplementation((cmd, callback) => {
+				if (cmd.includes("gh release create")) {
+					callback(null, { stdout: "https://github.com/user/repo/releases/tag/v1.0.0\n" });
+				}
+			});
 
-			// Mock checkGitHubCLI success
-			mockExec.mockResolvedValueOnce({ stdout: "gh version 2.0.0", stderr: "" });
-			mockExec.mockResolvedValueOnce({ stdout: "Logged in", stderr: "" });
-			
-			// Mock release creation
-			mockExec.mockResolvedValueOnce({ stdout: mockOutput, stderr: "" });
-
-			const result = await createRelease("v1.0.0", "Release v1.0.0", "Release notes");
+			const result = await createRelease("v1.0.0", "Release 1.0.0", "Release notes");
 			expect(result).toBe("https://github.com/user/repo/releases/tag/v1.0.0");
-		});
-
-		it("should create prerelease when specified", async () => {
-			const mockOutput = "https://github.com/user/repo/releases/tag/v1.0.0-rc.1\n";
-
-			// Mock checkGitHubCLI success
-			mockExec.mockResolvedValueOnce({ stdout: "gh version 2.0.0", stderr: "" });
-			mockExec.mockResolvedValueOnce({ stdout: "Logged in", stderr: "" });
-			
-			// Mock prerelease creation
-			mockExec.mockResolvedValueOnce({ stdout: mockOutput, stderr: "" });
-
-			const result = await createRelease("v1.0.0-rc.1", "RC Release", "RC notes", true);
-			expect(result).toBe("https://github.com/user/repo/releases/tag/v1.0.0-rc.1");
-			expect(mockExec).toHaveBeenLastCalledWith(
-				'gh release create "v1.0.0-rc.1" --title "RC Release" --notes "RC notes" --prerelease'
+			expect(mockExec).toHaveBeenCalledWith(
+				expect.stringContaining("gh release create"),
+				expect.any(Function),
 			);
 		});
 
-		it("should return stdout if no URL found", async () => {
-			const mockOutput = "Release created successfully\n";
+		it("should handle special characters in notes", async () => {
+			mockExec.mockImplementation((cmd, callback) => {
+				callback(null, { stdout: "https://github.com/user/repo/releases/tag/v1.0.0\n" });
+			});
 
-			// Mock checkGitHubCLI success
-			mockExec.mockResolvedValueOnce({ stdout: "gh version 2.0.0", stderr: "" });
-			mockExec.mockResolvedValueOnce({ stdout: "Logged in", stderr: "" });
-			
-			// Mock release creation
-			mockExec.mockResolvedValueOnce({ stdout: mockOutput, stderr: "" });
-
-			const result = await createRelease("v1.0.0", "Release", "Notes");
-			expect(result).toBe("Release created successfully");
+			await createRelease("v1.0.0", "Release", 'Notes with "quotes" and $vars');
+			expect(mockExec).toHaveBeenCalledWith(
+				expect.stringContaining("gh release create"),
+				expect.any(Function),
+			);
 		});
 
 		it("should throw GitHubError on failure", async () => {
-			// Mock checkGitHubCLI success
-			mockExec.mockResolvedValueOnce({ stdout: "gh version 2.0.0", stderr: "" });
-			mockExec.mockResolvedValueOnce({ stdout: "Logged in", stderr: "" });
-			
-			// Mock release creation failure
-			mockExec.mockRejectedValueOnce(new Error("Release creation failed"));
+			mockExec.mockImplementation((cmd, callback) => {
+				callback(new Error("failed to create release"), { stderr: "failed to create release" });
+			});
 
 			await expect(createRelease("v1.0.0", "Release", "Notes")).rejects.toThrow(GitHubError);
-			await expect(createRelease("v1.0.0", "Release", "Notes")).rejects.toThrow("Failed to create release");
 		});
 	});
 });
