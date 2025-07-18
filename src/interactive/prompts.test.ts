@@ -1,19 +1,25 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
-// Mock the actual prompts module to avoid issues with readline mocking
-const mockAskYesNo = vi.fn();
-const mockAskInput = vi.fn();
-const mockAskChoice = vi.fn();
-const mockAskMultipleChoice = vi.fn();
-const mockClosePrompts = vi.fn();
-
-// Mock the entire module
-vi.mock("node:readline/promises", () => ({
-	createInterface: () => ({
-		question: vi.fn(),
-		close: vi.fn(),
-	}),
+// Mock readline to prevent actual user input during tests
+const mockQuestion = vi.fn();
+const mockClose = vi.fn();
+const mockCreateInterface = vi.fn(() => ({
+	question: mockQuestion,
+	close: mockClose,
 }));
+
+vi.mock("node:readline", () => ({
+	createInterface: mockCreateInterface,
+}));
+
+// Import after mocking
+import {
+	askYesNo,
+	askInput,
+	askChoice,
+	askMultipleChoice,
+	closePrompts,
+} from "./prompts.js";
 
 describe("interactive/prompts", () => {
 	beforeEach(() => {
@@ -21,12 +27,11 @@ describe("interactive/prompts", () => {
 	});
 
 	afterEach(() => {
-		vi.resetAllMocks();
+		vi.restoreAllMocks();
 	});
 
 	describe("askYesNo behavior", () => {
-		it("should handle yes/no logic correctly", () => {
-			// Test the core logic without actual readline
+		it("should handle yes/no logic correctly", async () => {
 			const testCases = [
 				{ input: "y", expected: true },
 				{ input: "yes", expected: true },
@@ -39,194 +44,216 @@ describe("interactive/prompts", () => {
 			];
 
 			for (const testCase of testCases) {
-				const result = testCase.input.toLowerCase().startsWith("y");
+				mockQuestion.mockImplementationOnce((prompt, callback) => {
+					callback(testCase.input);
+				});
+
+				const result = await askYesNo("Test question?");
 				expect(result).toBe(testCase.expected);
 			}
 		});
 
-		it("should handle default values correctly", () => {
-			// Test default value logic
-			const emptyInput = "";
-			const whitespaceInput = "   ";
+		it("should handle default values correctly", async () => {
+			// Test with default true
+			mockQuestion.mockImplementationOnce((prompt, callback) => {
+				callback(""); // Empty input
+			});
+			const resultTrue = await askYesNo("Test?", true);
+			expect(resultTrue).toBe(true);
 
-			// Default true case
-			const shouldUseDefaultTrue = emptyInput.trim() === "";
-			expect(shouldUseDefaultTrue).toBe(true);
-
-			// Default false case  
-			const shouldUseDefaultFalse = whitespaceInput.trim() === "";
-			expect(shouldUseDefaultFalse).toBe(true);
+			// Test with default false
+			mockQuestion.mockImplementationOnce((prompt, callback) => {
+				callback(""); // Empty input
+			});
+			const resultFalse = await askYesNo("Test?", false);
+			expect(resultFalse).toBe(false);
 		});
 
-		it("should format prompts correctly", () => {
-			const question = "Continue?";
-			const defaultTrue = " [Y/n]";
-			const defaultFalse = " [y/N]";
+		it("should format prompts correctly", async () => {
+			mockQuestion.mockImplementation((prompt, callback) => {
+				callback("y");
+			});
 
-			expect(`${question}${defaultTrue} `).toBe("Continue? [Y/n] ");
-			expect(`${question}${defaultFalse} `).toBe("Continue? [y/N] ");
+			await askYesNo("Test question?", true);
+			expect(mockQuestion).toHaveBeenCalledWith(
+				"Test question? [Y/n]: ",
+				expect.any(Function),
+			);
+
+			await askYesNo("Test question?", false);
+			expect(mockQuestion).toHaveBeenCalledWith(
+				"Test question? [y/N]: ",
+				expect.any(Function),
+			);
 		});
 	});
 
 	describe("askInput behavior", () => {
-		it("should handle input trimming", () => {
-			const testInputs = [
-				"  test  ",
-				"\ttest\t",
-				"test",
-				"  ",
-			];
+		it("should handle input trimming", async () => {
+			const testInputs = ["  test  ", " test ", "test", ""];
+			const results: string[] = [];
 
-			const results = testInputs.map(input => input.trim());
-			expect(results).toEqual(["test", "test", "test", ""]);
+			for (const input of testInputs) {
+				mockQuestion.mockImplementationOnce((prompt, callback) => {
+					callback(input);
+				});
+				const result = await askInput("Test:");
+				results.push(result);
+			}
+
+			const trimmedResults = testInputs.map(input => input.trim());
+			expect(results).toEqual(trimmedResults);
 		});
 
-		it("should handle default values", () => {
+		it("should handle default values", async () => {
 			const emptyInput = "";
 			const defaultValue = "default";
 
-			const shouldUseDefault = emptyInput.trim() === "" && defaultValue;
+			// Test the logic that would be used in askInput
+			const shouldUseDefault = emptyInput.trim() === "" && !!defaultValue;
 			expect(shouldUseDefault).toBe(true);
+
+			// Test actual askInput with default
+			mockQuestion.mockImplementationOnce((prompt, callback) => {
+				callback("");
+			});
+			const result = await askInput("Test:", defaultValue);
+			expect(result).toBe(defaultValue);
 		});
 
-		it("should format prompts with defaults", () => {
+		it("should format prompts with defaults", async () => {
 			const question = "Enter value";
 			const withDefault = `${question} [default]: `;
 			const withoutDefault = `${question}: `;
 
 			expect(withDefault).toBe("Enter value [default]: ");
 			expect(withoutDefault).toBe("Enter value: ");
+
+			// Test actual prompt formatting
+			mockQuestion.mockImplementation((prompt, callback) => {
+				callback("test");
+			});
+
+			await askInput("Test question", "defaultValue");
+			expect(mockQuestion).toHaveBeenCalledWith(
+				"Test question [defaultValue]: ",
+				expect.any(Function),
+			);
 		});
 	});
 
 	describe("askChoice behavior", () => {
-		it("should validate choice indices correctly", () => {
-			const choices = [
-				{ name: "Option 1", value: "opt1" },
-				{ name: "Option 2", value: "opt2" },
-				{ name: "Option 3", value: "opt3" },
-			];
+		const choices = [
+			{ name: "Option 1", value: "opt1" },
+			{ name: "Option 2", value: "opt2" },
+			{ name: "Option 3", value: "opt3" },
+		];
 
-			// Test valid indices
-			const validIndices = [0, 1, 2];
-			for (const index of validIndices) {
-				const isValid = index >= 0 && index < choices.length;
-				expect(isValid).toBe(true);
-				if (isValid) {
-					const choice = choices[index];
-					expect(choice).toBeDefined();
-				}
-			}
+		it("should validate choice indices correctly", async () => {
+			mockQuestion.mockImplementationOnce((prompt, callback) => {
+				callback("1"); // Valid choice
+			});
 
-			// Test invalid indices
-			const invalidIndices = [-1, 3, 999];
-			for (const index of invalidIndices) {
-				const isValid = index >= 0 && index < choices.length;
-				expect(isValid).toBe(false);
-			}
+			const result = await askChoice("Choose:", choices);
+			expect(result).toBe("opt1");
 		});
 
-		it("should parse user input to indices correctly", () => {
-			const testInputs = [
-				{ input: "1", expected: 0 },
-				{ input: "2", expected: 1 },
-				{ input: "3", expected: 2 },
-				{ input: "0", expected: -1 },
-				{ input: "invalid", expected: NaN },
+		it("should parse user input to indices correctly", async () => {
+			const testCases = [
+				{ input: "1", expected: "opt1" },
+				{ input: "2", expected: "opt2" },
+				{ input: "3", expected: "opt3" },
 			];
 
-			for (const testCase of testInputs) {
-				const parsed = Number.parseInt(testCase.input.trim(), 10) - 1;
-				if (Number.isNaN(testCase.expected)) {
-					expect(Number.isNaN(parsed)).toBe(true);
-				} else {
-					expect(parsed).toBe(testCase.expected);
-				}
+			for (const testCase of testCases) {
+				mockQuestion.mockImplementationOnce((prompt, callback) => {
+					callback(testCase.input);
+				});
+
+				const result = await askChoice("Choose:", choices);
+				expect(result).toBe(testCase.expected);
 			}
 		});
 	});
 
 	describe("askMultipleChoice behavior", () => {
-		it("should parse multiple selections correctly", () => {
-			const testInputs = [
-				{ input: "1 3", expected: [0, 2] },
-				{ input: "  1   3  ", expected: [0, 2] },
-				{ input: "1", expected: [0] },
-				{ input: "1 2 3", expected: [0, 1, 2] },
-			];
+		const choices = [
+			{ name: "Option 1", value: "opt1" },
+			{ name: "Option 2", value: "opt2" },
+			{ name: "Option 3", value: "opt3" },
+		];
 
-			for (const testCase of testInputs) {
-				const numbers = testCase.input
-					.trim()
-					.split(/\s+/)
-					.map((n) => Number.parseInt(n, 10) - 1);
-				expect(numbers).toEqual(testCase.expected);
-			}
+		it("should parse multiple selections correctly", async () => {
+			mockQuestion.mockImplementationOnce((prompt, callback) => {
+				callback("1,2"); // Multiple choices
+			});
+
+			const result = await askMultipleChoice("Choose multiple:", choices);
+			expect(result).toEqual(["opt1", "opt2"]);
 		});
 
-		it("should validate multiple selections", () => {
-			const choices = [
-				{ name: "Option 1", value: "opt1" },
-				{ name: "Option 2", value: "opt2" },
-				{ name: "Option 3", value: "opt3" },
-			];
+		it("should validate multiple selections", async () => {
+			mockQuestion.mockImplementationOnce((prompt, callback) => {
+				callback("1,3"); // Valid multiple choices
+			});
 
+			const result = await askMultipleChoice("Choose:", choices);
+			expect(result).toEqual(["opt1", "opt3"]);
+		});
+
+		it("should map indices to values correctly", async () => {
 			const testCases = [
-				{ numbers: [0, 2], valid: true },
-				{ numbers: [0, 1, 2], valid: true },
-				{ numbers: [-1, 0], valid: false },
-				{ numbers: [0, 3], valid: false },
-				{ numbers: [0], valid: true },
+				{ input: "1", expected: ["opt1"] },
+				{ input: "1,2,3", expected: ["opt1", "opt2", "opt3"] },
+				{ input: "2,1", expected: ["opt2", "opt1"] },
 			];
 
 			for (const testCase of testCases) {
-				const isValid = testCase.numbers.every(
-					(num) => num >= 0 && num < choices.length
-				);
-				expect(isValid).toBe(testCase.valid);
+				mockQuestion.mockImplementationOnce((prompt, callback) => {
+					callback(testCase.input);
+				});
+
+				const result = await askMultipleChoice("Choose:", choices);
+				expect(result).toEqual(testCase.expected);
 			}
-		});
-
-		it("should map indices to values correctly", () => {
-			const choices = [
-				{ name: "Option 1", value: "opt1" },
-				{ name: "Option 2", value: "opt2" },
-				{ name: "Option 3", value: "opt3" },
-			];
-
-			const indices = [0, 2];
-			const results: string[] = [];
-			
-			for (const num of indices) {
-				const choice = choices[num];
-				if (choice) {
-					results.push(choice.value);
-				}
-			}
-
-			expect(results).toEqual(["opt1", "opt3"]);
 		});
 	});
 
 	describe("module structure", () => {
 		it("should export all required functions", async () => {
-			const module = await import("./prompts.js");
-			
-			expect(module.askYesNo).toBeDefined();
-			expect(module.askInput).toBeDefined();
-			expect(module.askChoice).toBeDefined();
-			expect(module.askMultipleChoice).toBeDefined();
-			expect(module.closePrompts).toBeDefined();
+			// Verify all functions are properly exported
+			expect(typeof askYesNo).toBe("function");
+			expect(typeof askInput).toBe("function");
+			expect(typeof askChoice).toBe("function");
+			expect(typeof askMultipleChoice).toBe("function");
+			expect(typeof closePrompts).toBe("function");
+
+			// Test that closePrompts works
+			closePrompts();
+			expect(mockClose).toHaveBeenCalled();
 		});
 
 		it("should have correct function signatures", async () => {
-			const module = await import("./prompts.js");
-			
-			expect(typeof module.askYesNo).toBe("function");
-			expect(typeof module.askInput).toBe("function");
-			expect(typeof module.askChoice).toBe("function");
-			expect(typeof module.askMultipleChoice).toBe("function");
-			expect(typeof module.closePrompts).toBe("function");
+			// Test basic function calls work without errors
+			mockQuestion.mockImplementation((prompt, callback) => {
+				callback("test");
+			});
+
+			const yesNoResult = await askYesNo("Test?");
+			expect(typeof yesNoResult).toBe("boolean");
+
+			const inputResult = await askInput("Input:");
+			expect(typeof inputResult).toBe("string");
+
+			const choiceResult = await askChoice("Choose:", [
+				{ name: "Test", value: "test" },
+			]);
+			expect(typeof choiceResult).toBe("string");
+
+			const multiChoiceResult = await askMultipleChoice("Choose:", [
+				{ name: "Test", value: "test" },
+			]);
+			expect(Array.isArray(multiChoiceResult)).toBe(true);
 		});
 	});
 });
