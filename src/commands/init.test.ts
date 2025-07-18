@@ -19,8 +19,12 @@ vi.mock("../fs/utils.js", () => ({
 }));
 
 const mockReaddir = vi.mocked((await import("node:fs/promises")).readdir);
-const mockAskYesNo = vi.mocked((await import("../interactive/prompts.js")).askYesNo);
-const mockAskMultipleChoice = vi.mocked((await import("../interactive/prompts.js")).askMultipleChoice);
+const mockAskYesNo = vi.mocked(
+	(await import("../interactive/prompts.js")).askYesNo,
+);
+const mockAskMultipleChoice = vi.mocked(
+	(await import("../interactive/prompts.js")).askMultipleChoice,
+);
 const mockEnsureDir = vi.mocked((await import("../fs/utils.js")).ensureDir);
 const mockWriteFile = vi.mocked((await import("../fs/utils.js")).writeFile);
 
@@ -47,12 +51,22 @@ describe("commands/init", () => {
 		it("should initialize project with default configuration", async () => {
 			await initCommand();
 
-			expect(consoleSpy).toHaveBeenCalledWith("🚀 Initializing CD tools configuration...");
+			expect(consoleSpy).toHaveBeenCalledWith(
+				"🚀 Initializing CD tools configuration...",
+			);
 			expect(mockEnsureDir).toHaveBeenCalledWith(".cdtools");
 			expect(mockEnsureDir).toHaveBeenCalledWith(".github/workflows");
-			expect(mockWriteFile).toHaveBeenCalledWith(".github/workflows/npm-release.yml", expect.any(String));
-			expect(mockWriteFile).toHaveBeenCalledWith(".cdtools/config.json", expect.any(String));
-			expect(consoleSpy).toHaveBeenCalledWith("🎉 CD tools initialization complete!");
+			expect(mockWriteFile).toHaveBeenCalledWith(
+				".github/workflows/npm-release.yml",
+				expect.any(String),
+			);
+			expect(mockWriteFile).toHaveBeenCalledWith(
+				".cdtools/config.json",
+				expect.any(String),
+			);
+			expect(consoleSpy).toHaveBeenCalledWith(
+				"🎉 CD tools initialization complete!",
+			);
 		});
 
 		it("should handle multiple registry selection", async () => {
@@ -60,24 +74,36 @@ describe("commands/init", () => {
 
 			await initCommand();
 
-			expect(mockWriteFile).toHaveBeenCalledWith(".github/workflows/npm-release.yml", expect.any(String));
-			expect(mockWriteFile).toHaveBeenCalledWith(".github/workflows/crates-release.yml", expect.any(String));
-			expect(mockWriteFile).toHaveBeenCalledWith(".github/workflows/container-release.yml", expect.any(String));
+			expect(mockWriteFile).toHaveBeenCalledWith(
+				".github/workflows/npm-release.yml",
+				expect.any(String),
+			);
+			expect(mockWriteFile).toHaveBeenCalledWith(
+				".github/workflows/crates-release.yml",
+				expect.any(String),
+			);
+			expect(mockWriteFile).toHaveBeenCalledWith(
+				".github/workflows/container-release.yml",
+				expect.any(String),
+			);
 
 			// Should create config with all project types
-			const configCall = mockWriteFile.mock.calls.find(call => 
-				call[0] === ".cdtools/config.json"
+			const configCall = mockWriteFile.mock.calls.find(
+				(call) => call[0] === ".cdtools/config.json",
 			);
 			expect(configCall).toBeDefined();
 			const configContent = JSON.parse(configCall![1]);
-			
+
 			expect(configContent.projects).toHaveLength(3);
 			expect(configContent.projects).toEqual(
 				expect.arrayContaining([
 					expect.objectContaining({ type: "typescript", registries: ["npm"] }),
 					expect.objectContaining({ type: "rust", registries: ["crates"] }),
-					expect.objectContaining({ type: "container", registries: ["container"] }),
-				])
+					expect.objectContaining({
+						type: "container",
+						registries: ["container"],
+					}),
+				]),
 			);
 		});
 
@@ -92,11 +118,11 @@ describe("commands/init", () => {
 			expect(mockAskYesNo).toHaveBeenCalledWith(
 				".cdtools directory already exists. Overwrite?",
 			);
-			
+
 			// Should continue with initialization
 			expect(mockWriteFile).toHaveBeenCalledWith(
 				".cdtools/config.json",
-				expect.any(String)
+				expect.any(String),
 			);
 		});
 
@@ -108,7 +134,7 @@ describe("commands/init", () => {
 			await initCommand();
 
 			expect(consoleSpy).toHaveBeenCalledWith("❌ Initialization cancelled");
-			
+
 			// Should not create any files
 			expect(mockWriteFile).not.toHaveBeenCalled();
 		});
@@ -118,11 +144,11 @@ describe("commands/init", () => {
 
 			await initCommand();
 
-			const workflowCall = mockWriteFile.mock.calls.find(call => 
-				call[0] === ".github/workflows/npm-release.yml"
+			const workflowCall = mockWriteFile.mock.calls.find(
+				(call) => call[0] === ".github/workflows/npm-release.yml",
 			);
 			expect(workflowCall).toBeDefined();
-			
+
 			const workflowContent = workflowCall![1];
 			expect(workflowContent).toContain("name: npm Release");
 			expect(workflowContent).toContain("npm ci");
@@ -135,11 +161,11 @@ describe("commands/init", () => {
 
 			await initCommand();
 
-			const workflowCall = mockWriteFile.mock.calls.find(call => 
-				call[0] === ".github/workflows/crates-release.yml"
+			const workflowCall = mockWriteFile.mock.calls.find(
+				(call) => call[0] === ".github/workflows/crates-release.yml",
 			);
 			expect(workflowCall).toBeDefined();
-			
+
 			const workflowContent = workflowCall![1];
 			expect(workflowContent).toContain("name: crates.io Release");
 			expect(workflowContent).toContain("cargo build");
@@ -151,11 +177,11 @@ describe("commands/init", () => {
 
 			await initCommand();
 
-			const workflowCall = mockWriteFile.mock.calls.find(call => 
-				call[0] === ".github/workflows/container-release.yml"
+			const workflowCall = mockWriteFile.mock.calls.find(
+				(call) => call[0] === ".github/workflows/container-release.yml",
 			);
 			expect(workflowCall).toBeDefined();
-			
+
 			const workflowContent = workflowCall![1];
 			expect(workflowContent).toContain("name: Container Release");
 			expect(workflowContent).toContain("docker build");
@@ -167,12 +193,12 @@ describe("commands/init", () => {
 
 			await initCommand();
 
-			const configCall = mockWriteFile.mock.calls.find(call => 
-				call[0] === ".cdtools/config.json"
+			const configCall = mockWriteFile.mock.calls.find(
+				(call) => call[0] === ".cdtools/config.json",
 			);
 			expect(configCall).toBeDefined();
 			const configContent = JSON.parse(configCall![1]);
-			
+
 			expect(configContent.projects).toHaveLength(0);
 			expect(configContent.baseVersion).toBe("1.0.0");
 		});
@@ -180,17 +206,17 @@ describe("commands/init", () => {
 		it("should generate correct default configuration structure", async () => {
 			await initCommand();
 
-			const configCall = mockWriteFile.mock.calls.find(call => 
-				call[0] === ".cdtools/config.json"
+			const configCall = mockWriteFile.mock.calls.find(
+				(call) => call[0] === ".cdtools/config.json",
 			);
 			expect(configCall).toBeDefined();
 			const configContent = JSON.parse(configCall![1]);
-			
+
 			expect(configContent).toHaveProperty("baseVersion");
 			expect(configContent).toHaveProperty("versionTags");
 			expect(configContent).toHaveProperty("projects");
 			expect(configContent).toHaveProperty("releaseNotes");
-			
+
 			expect(configContent.versionTags).toHaveLength(2); // alpha and rc
 			expect(configContent.releaseNotes.enabled).toBe(true);
 		});
@@ -199,8 +225,12 @@ describe("commands/init", () => {
 			await initCommand();
 
 			expect(consoleSpy).toHaveBeenCalledWith("Next steps:");
-			expect(consoleSpy).toHaveBeenCalledWith("1. Edit .cdtools/config.json to match your project structure");
-			expect(consoleSpy).toHaveBeenCalledWith("2. Run 'cd-tools start-pr' to begin a release");
+			expect(consoleSpy).toHaveBeenCalledWith(
+				"1. Edit .cdtools/config.json to match your project structure",
+			);
+			expect(consoleSpy).toHaveBeenCalledWith(
+				"2. Run 'cd-tools start-pr' to begin a release",
+			);
 		});
 	});
 });

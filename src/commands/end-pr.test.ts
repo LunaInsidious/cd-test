@@ -138,7 +138,9 @@ describe("endPrCommand", () => {
 			expect(readdir).toHaveBeenCalledWith(".cdtools");
 
 			// Should read and parse tracking data
-			expect(readFileContent).toHaveBeenCalledWith(".cdtools/rc_feat_test.json");
+			expect(readFileContent).toHaveBeenCalledWith(
+				".cdtools/rc_feat_test.json",
+			);
 
 			// Should create stable release when next is "stable"
 			expect(commitChanges).toHaveBeenCalledWith(

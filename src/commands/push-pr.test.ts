@@ -143,7 +143,9 @@ describe("pushPrCommand", () => {
 			// Should load config and find tracking file
 			expect(loadConfig).toHaveBeenCalledOnce();
 			expect(readdir).toHaveBeenCalledWith(".cdtools");
-			expect(readFileContent).toHaveBeenCalledWith(".cdtools/rc_feat_test.json");
+			expect(readFileContent).toHaveBeenCalledWith(
+				".cdtools/rc_feat_test.json",
+			);
 
 			// Should get changed files and calculate next version
 			expect(getChangedFiles).toHaveBeenCalledWith("main");
@@ -358,9 +360,9 @@ describe("pushPrCommand", () => {
 			);
 
 			// Parse the actual written content to verify it contains the new version
-			const writeCall = vi.mocked(writeFile).mock.calls.find(
-				call => call[0] === ".cdtools/rc_feat_test.json"
-			);
+			const writeCall = vi
+				.mocked(writeFile)
+				.mock.calls.find((call) => call[0] === ".cdtools/rc_feat_test.json");
 			expect(writeCall).toBeDefined();
 			const writtenContent = JSON.parse(writeCall![1]);
 			expect(writtenContent.currentVersion).toBe("1.0.1-rc.1");
@@ -404,7 +406,9 @@ describe("pushPrCommand", () => {
 				],
 			};
 			vi.mocked(loadConfig).mockResolvedValue(configWithNested);
-			vi.mocked(getChangedFiles).mockResolvedValue(["packages/ui/src/index.ts"]);
+			vi.mocked(getChangedFiles).mockResolvedValue([
+				"packages/ui/src/index.ts",
+			]);
 
 			await pushPrCommand();
 
@@ -428,7 +432,9 @@ describe("pushPrCommand", () => {
 			// Get the actual body from the mock call
 			const actualBody = vi.mocked(createPullRequest).mock.calls[0]?.[1];
 			expect(actualBody).toContain("### Updated Projects");
-			expect(actualBody).toContain("- **./frontend** (typescript) → 1.0.1-rc.1");
+			expect(actualBody).toContain(
+				"- **./frontend** (typescript) → 1.0.1-rc.1",
+			);
 			expect(actualBody).toContain("- **./backend** (rust) → 1.0.1-rc.1");
 			expect(actualBody).toContain("### Registry Deployments");
 			expect(actualBody).toContain("- npm");

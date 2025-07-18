@@ -22,11 +22,21 @@ vi.mock("../interactive/prompts.js", () => ({
 	closePrompts: vi.fn(),
 }));
 
-const mockInitCommand = vi.mocked((await import("../commands/init.js")).initCommand);
-const mockStartPrCommand = vi.mocked((await import("../commands/start-pr.js")).startPrCommand);
-const mockPushPrCommand = vi.mocked((await import("../commands/push-pr.js")).pushPrCommand);
-const mockEndPrCommand = vi.mocked((await import("../commands/end-pr.js")).endPrCommand);
-const mockClosePrompts = vi.mocked((await import("../interactive/prompts.js")).closePrompts);
+const mockInitCommand = vi.mocked(
+	(await import("../commands/init.js")).initCommand,
+);
+const mockStartPrCommand = vi.mocked(
+	(await import("../commands/start-pr.js")).startPrCommand,
+);
+const mockPushPrCommand = vi.mocked(
+	(await import("../commands/push-pr.js")).pushPrCommand,
+);
+const mockEndPrCommand = vi.mocked(
+	(await import("../commands/end-pr.js")).endPrCommand,
+);
+const mockClosePrompts = vi.mocked(
+	(await import("../interactive/prompts.js")).closePrompts,
+);
 
 describe("cli/index", () => {
 	let consoleSpy: ReturnType<typeof vi.spyOn>;
@@ -36,8 +46,10 @@ describe("cli/index", () => {
 	beforeEach(() => {
 		consoleSpy = vi.spyOn(console, "log").mockImplementation(() => {});
 		consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
-		processExitSpy = vi.spyOn(process, "exit").mockImplementation(() => undefined as never);
-		
+		processExitSpy = vi
+			.spyOn(process, "exit")
+			.mockImplementation(() => undefined as never);
+
 		vi.clearAllMocks();
 	});
 
@@ -53,19 +65,25 @@ describe("cli/index", () => {
 			await runCLI(["node", "cd-tools"]);
 
 			expect(consoleSpy).toHaveBeenCalledWith(
-				expect.stringContaining("Available commands:")
+				expect.stringContaining("Available commands:"),
 			);
 			expect(consoleSpy).toHaveBeenCalledWith(
-				expect.stringContaining("init         Initialize project with GitHub workflows and default configuration")
+				expect.stringContaining(
+					"init         Initialize project with GitHub workflows and default configuration",
+				),
 			);
 			expect(consoleSpy).toHaveBeenCalledWith(
-				expect.stringContaining("start-pr     Start a release PR with version selection")
+				expect.stringContaining(
+					"start-pr     Start a release PR with version selection",
+				),
 			);
 			expect(consoleSpy).toHaveBeenCalledWith(
-				expect.stringContaining("push-pr      Update versions and create/update PR")
+				expect.stringContaining(
+					"push-pr      Update versions and create/update PR",
+				),
 			);
 			expect(consoleSpy).toHaveBeenCalledWith(
-				expect.stringContaining("end-pr       Finalize release and merge PR")
+				expect.stringContaining("end-pr       Finalize release and merge PR"),
 			);
 		});
 
@@ -73,7 +91,7 @@ describe("cli/index", () => {
 			await runCLI(["node", "cd-tools", "--help"]);
 
 			expect(consoleSpy).toHaveBeenCalledWith(
-				expect.stringContaining("Available commands:")
+				expect.stringContaining("Available commands:"),
 			);
 		});
 
@@ -81,7 +99,7 @@ describe("cli/index", () => {
 			await runCLI(["node", "cd-tools", "-h"]);
 
 			expect(consoleSpy).toHaveBeenCalledWith(
-				expect.stringContaining("Available commands:")
+				expect.stringContaining("Available commands:"),
 			);
 		});
 
@@ -116,7 +134,9 @@ describe("cli/index", () => {
 		it("should handle unknown command gracefully", async () => {
 			await runCLI(["node", "cd-tools", "unknown-command"]);
 
-			expect(consoleErrorSpy).toHaveBeenCalledWith("Error: Unknown command: unknown-command");
+			expect(consoleErrorSpy).toHaveBeenCalledWith(
+				"Error: Unknown command: unknown-command",
+			);
 			expect(processExitSpy).toHaveBeenCalledWith(1);
 			expect(mockClosePrompts).toHaveBeenCalledOnce();
 		});
@@ -132,7 +152,9 @@ describe("cli/index", () => {
 		it("should close prompts even when command throws error", async () => {
 			mockInitCommand.mockRejectedValue(new Error("Command failed"));
 
-			await expect(runCLI(["node", "cd-tools", "init"])).rejects.toThrow("Command failed");
+			await expect(runCLI(["node", "cd-tools", "init"])).rejects.toThrow(
+				"Command failed",
+			);
 			expect(mockClosePrompts).toHaveBeenCalledOnce();
 		});
 
@@ -162,7 +184,7 @@ describe("cli/index", () => {
 			await runCLI([]);
 
 			expect(consoleSpy).toHaveBeenCalledWith(
-				expect.stringContaining("Available commands:")
+				expect.stringContaining("Available commands:"),
 			);
 		});
 
@@ -170,7 +192,7 @@ describe("cli/index", () => {
 			await runCLI(["node"]);
 
 			expect(consoleSpy).toHaveBeenCalledWith(
-				expect.stringContaining("Available commands:")
+				expect.stringContaining("Available commands:"),
 			);
 		});
 
@@ -205,7 +227,9 @@ describe("cli/index", () => {
 				throw new Error("Unexpected error");
 			});
 
-			await expect(runCLI(["node", "cd-tools", "init"])).rejects.toThrow("Unexpected error");
+			await expect(runCLI(["node", "cd-tools", "init"])).rejects.toThrow(
+				"Unexpected error",
+			);
 			expect(mockClosePrompts).toHaveBeenCalledOnce();
 		});
 
@@ -229,11 +253,11 @@ describe("cli/index", () => {
 
 			for (const [command, mockFn] of commands) {
 				vi.clearAllMocks();
-				
+
 				await runCLI(["node", "cd-tools", command]);
-				
+
 				expect(mockFn).toHaveBeenCalledOnce();
-				
+
 				// Ensure other commands weren't called
 				for (const [, otherMockFn] of commands) {
 					if (otherMockFn !== mockFn) {
@@ -247,7 +271,9 @@ describe("cli/index", () => {
 			// Our commands should be case sensitive
 			await runCLI(["node", "cd-tools", "INIT"]);
 
-			expect(consoleErrorSpy).toHaveBeenCalledWith("Error: Unknown command: INIT");
+			expect(consoleErrorSpy).toHaveBeenCalledWith(
+				"Error: Unknown command: INIT",
+			);
 			expect(processExitSpy).toHaveBeenCalledWith(1);
 			expect(mockInitCommand).not.toHaveBeenCalled();
 		});

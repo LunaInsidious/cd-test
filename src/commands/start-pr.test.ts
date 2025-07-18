@@ -24,13 +24,25 @@ vi.mock("../version/calculator.js", () => ({
 	calculateNextVersion: vi.fn(),
 }));
 
-const mockLoadConfig = vi.mocked((await import("../config/parser.js")).loadConfig);
+const mockLoadConfig = vi.mocked(
+	(await import("../config/parser.js")).loadConfig,
+);
 const mockWriteFile = vi.mocked((await import("../fs/utils.js")).writeFile);
-const mockCreateBranch = vi.mocked((await import("../git/operations.js")).createBranch);
-const mockPullLatest = vi.mocked((await import("../git/operations.js")).pullLatest);
-const mockAskChoice = vi.mocked((await import("../interactive/prompts.js")).askChoice);
-const mockAskInput = vi.mocked((await import("../interactive/prompts.js")).askInput);
-const mockCalculateNextVersion = vi.mocked((await import("../version/calculator.js")).calculateNextVersion);
+const mockCreateBranch = vi.mocked(
+	(await import("../git/operations.js")).createBranch,
+);
+const mockPullLatest = vi.mocked(
+	(await import("../git/operations.js")).pullLatest,
+);
+const mockAskChoice = vi.mocked(
+	(await import("../interactive/prompts.js")).askChoice,
+);
+const mockAskInput = vi.mocked(
+	(await import("../interactive/prompts.js")).askInput,
+);
+const mockCalculateNextVersion = vi.mocked(
+	(await import("../version/calculator.js")).calculateNextVersion,
+);
 
 describe("commands/start-pr", () => {
 	let consoleSpy: ReturnType<typeof vi.spyOn>;
@@ -96,17 +108,20 @@ describe("commands/start-pr", () => {
 				[
 					{ name: "alpha", value: "alpha" },
 					{ name: "rc", value: "rc" },
-				]
+				],
 			);
 
 			// Should ask for branch name
-			expect(mockAskInput).toHaveBeenCalledWith("Enter branch name", "feat/release");
+			expect(mockAskInput).toHaveBeenCalledWith(
+				"Enter branch name",
+				"feat/release",
+			);
 
 			// Should calculate version
 			expect(mockCalculateNextVersion).toHaveBeenCalledWith(
 				"1.0.0",
 				"rc",
-				"increment"
+				"increment",
 			);
 
 			// Should create branch
@@ -115,10 +130,12 @@ describe("commands/start-pr", () => {
 			// Should create tracking file
 			expect(mockWriteFile).toHaveBeenCalledWith(
 				".cdtools/rc_feat_new_feature.json",
-				expect.stringContaining('"tag": "rc"')
+				expect.stringContaining('"tag": "rc"'),
 			);
 
-			expect(consoleSpy).toHaveBeenCalledWith("✅ Release PR started successfully!");
+			expect(consoleSpy).toHaveBeenCalledWith(
+				"✅ Release PR started successfully!",
+			);
 		});
 
 		it("should handle alpha version tag selection", async () => {
@@ -130,10 +147,12 @@ describe("commands/start-pr", () => {
 			expect(mockCalculateNextVersion).toHaveBeenCalledWith(
 				"1.0.0",
 				"alpha",
-				"increment"
+				"increment",
 			);
 
-			expect(consoleSpy).toHaveBeenCalledWith("🏷️  Target version: 1.0.1-alpha.20250717123456");
+			expect(consoleSpy).toHaveBeenCalledWith(
+				"🏷️  Target version: 1.0.1-alpha.20250717123456",
+			);
 		});
 
 		it("should sanitize branch names for tracking file", async () => {
@@ -143,7 +162,7 @@ describe("commands/start-pr", () => {
 
 			expect(mockWriteFile).toHaveBeenCalledWith(
 				".cdtools/rc_feat_special_chars___.json",
-				expect.any(String)
+				expect.any(String),
 			);
 		});
 
@@ -153,8 +172,8 @@ describe("commands/start-pr", () => {
 
 			await startPrCommand();
 
-			const writeFileCall = mockWriteFile.mock.calls.find(call => 
-				call[0].endsWith('.json')
+			const writeFileCall = mockWriteFile.mock.calls.find((call) =>
+				call[0].endsWith(".json"),
 			);
 			expect(writeFileCall).toBeDefined();
 
@@ -179,7 +198,7 @@ describe("commands/start-pr", () => {
 			expect(mockCreateBranch).toHaveBeenCalledWith("rc:hotfix/critical-bug");
 			expect(mockWriteFile).toHaveBeenCalledWith(
 				".cdtools/rc_hotfix_critical_bug.json",
-				expect.any(String)
+				expect.any(String),
 			);
 		});
 
@@ -211,7 +230,7 @@ describe("commands/start-pr", () => {
 
 			expect(mockAskChoice).toHaveBeenCalledWith(
 				"Select version tag for this release:",
-				[{ name: "dev", value: "dev" }]
+				[{ name: "dev", value: "dev" }],
 			);
 		});
 
@@ -244,7 +263,9 @@ describe("commands/start-pr", () => {
 
 			expect(consoleSpy).toHaveBeenCalledWith("Next steps:");
 			expect(consoleSpy).toHaveBeenCalledWith("1. Make your changes");
-			expect(consoleSpy).toHaveBeenCalledWith("2. Run 'cd-tools push-pr' to update versions and create PR");
+			expect(consoleSpy).toHaveBeenCalledWith(
+				"2. Run 'cd-tools push-pr' to update versions and create PR",
+			);
 		});
 
 		it("should handle invalid version tag configuration", async () => {
@@ -257,15 +278,21 @@ describe("commands/start-pr", () => {
 				releaseNotes: { enabled: false, template: "" },
 			});
 
-			await expect(startPrCommand()).rejects.toThrow("Invalid version tag configuration");
+			await expect(startPrCommand()).rejects.toThrow(
+				"Invalid version tag configuration",
+			);
 		});
 
 		it("should log version information", async () => {
 			await startPrCommand();
 
 			expect(consoleSpy).toHaveBeenCalledWith("🏷️  Target version: 1.0.1-rc.0");
-			expect(consoleSpy).toHaveBeenCalledWith("🌿 Creating branch: rc:feat/new-feature");
-			expect(consoleSpy).toHaveBeenCalledWith("📝 Created tracking file: .cdtools/rc_feat_new_feature.json");
+			expect(consoleSpy).toHaveBeenCalledWith(
+				"🌿 Creating branch: rc:feat/new-feature",
+			);
+			expect(consoleSpy).toHaveBeenCalledWith(
+				"📝 Created tracking file: .cdtools/rc_feat_new_feature.json",
+			);
 		});
 
 		it("should handle complex version tag structures", async () => {
@@ -297,13 +324,13 @@ describe("commands/start-pr", () => {
 				[
 					{ name: "pre-alpha", value: "pre-alpha" },
 					{ name: "release-candidate", value: "release-candidate" },
-				]
+				],
 			);
 
 			expect(mockCalculateNextVersion).toHaveBeenCalledWith(
 				"2.1.0",
 				"release-candidate",
-				"increment"
+				"increment",
 			);
 		});
 	});

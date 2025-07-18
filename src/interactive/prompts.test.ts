@@ -101,7 +101,7 @@ describe("interactive/prompts", () => {
 				results.push(result);
 			}
 
-			const trimmedResults = testInputs.map(input => input.trim());
+			const trimmedResults = testInputs.map((input) => input.trim());
 			expect(results).toEqual(trimmedResults);
 		});
 

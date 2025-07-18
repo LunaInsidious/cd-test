@@ -1,5 +1,11 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
-import { mkdir, writeFile as fsWriteFile, readFile, rmdir, rm } from "node:fs/promises";
+import {
+	mkdir,
+	writeFile as fsWriteFile,
+	readFile,
+	rmdir,
+	rm,
+} from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import {
@@ -78,7 +84,7 @@ describe("fs/utils", () => {
 
 		it("should overwrite existing file", async () => {
 			const filePath = join(testDir, "test.txt");
-			
+
 			await writeFile(filePath, "Original content");
 			await writeFile(filePath, "Updated content");
 
@@ -119,7 +125,9 @@ describe("fs/utils", () => {
 			await updatePackageVersion(packagePath, "2.0.0");
 
 			const updatedContent = await readFile(packagePath, "utf8");
-			const updatedPackage = JSON.parse(updatedContent) as typeof originalPackage;
+			const updatedPackage = JSON.parse(
+				updatedContent,
+			) as typeof originalPackage;
 
 			expect(updatedPackage.version).toBe("2.0.0");
 			expect(updatedPackage.name).toBe("test-package");
@@ -145,7 +153,9 @@ describe("fs/utils", () => {
 			await updatePackageVersion(packagePath, "1.2.3");
 
 			const updatedContent = await readFile(packagePath, "utf8");
-			const updatedPackage = JSON.parse(updatedContent) as typeof originalPackage;
+			const updatedPackage = JSON.parse(
+				updatedContent,
+			) as typeof originalPackage;
 
 			expect(updatedPackage.version).toBe("1.2.3");
 			expect(updatedPackage.scripts).toEqual(originalPackage.scripts);
@@ -156,7 +166,9 @@ describe("fs/utils", () => {
 			const packagePath = join(testDir, "package.json");
 			await fsWriteFile(packagePath, "invalid json content");
 
-			await expect(updatePackageVersion(packagePath, "2.0.0")).rejects.toThrow();
+			await expect(
+				updatePackageVersion(packagePath, "2.0.0"),
+			).rejects.toThrow();
 		});
 	});
 
@@ -198,7 +210,7 @@ some-dep = { version = "0.3.0" }`;
 
 			const updatedContent = await readFile(cargoPath, "utf8");
 			const lines = updatedContent.split("\n");
-			
+
 			// Should update the package version
 			expect(lines[2]).toBe('version = "3.0.0"');
 			// Should not update other version references
