@@ -67,22 +67,22 @@ describe("endPrCommand", () => {
 					versionSuffixStrategy: "timestamp" as const,
 				},
 			},
-		],
+		] as const,
 		projects: [
 			{
 				path: "./frontend",
-				type: "typescript",
-				registries: ["npm"],
+				type: "typescript" as const,
+				registries: ["npm" as const],
 			},
 			{
 				path: "./backend",
-				type: "rust",
-				registries: ["crates"],
+				type: "rust" as const,
+				registries: ["crates" as const],
 			},
-		],
+		] as const,
 		releaseNotes: {
 			enabled: true,
-			template: "## Changes\n\n{{changes}}",
+			template: "## Changes\\n\\n{{changes}}",
 		},
 	};
 
@@ -114,7 +114,8 @@ describe("endPrCommand", () => {
 
 		// Default mocks
 		vi.mocked(loadConfig).mockResolvedValue(mockConfig);
-		vi.mocked(readdir).mockResolvedValue(["rc_feat_test.json"]);
+		// biome-ignore lint/suspicious/noExplicitAny: Required due to readdir type mismatch between string[] and Dirent[]
+		vi.mocked(readdir).mockResolvedValue(["rc_feat_test.json"] as any);
 		vi.mocked(readFileContent).mockResolvedValue(
 			JSON.stringify(mockTrackingData),
 		);
@@ -180,7 +181,7 @@ describe("endPrCommand", () => {
 							versionSuffixStrategy: "timestamp" as const,
 						},
 					},
-				],
+				] as const,
 			};
 			const trackingDataAlpha = {
 				...mockTrackingData,
@@ -227,7 +228,8 @@ describe("endPrCommand", () => {
 
 	describe("error handling", () => {
 		it("should handle missing tracking file", async () => {
-			vi.mocked(readdir).mockResolvedValue([]);
+			// biome-ignore lint/suspicious/noExplicitAny: Required due to readdir type mismatch between string[] and Dirent[]
+			vi.mocked(readdir).mockResolvedValue([] as any);
 
 			await endPrCommand();
 
@@ -254,9 +256,10 @@ describe("endPrCommand", () => {
 		it("should handle invalid tag configuration", async () => {
 			const configInvalid = {
 				...mockConfig,
-				versionTags: [{ rc: "invalid" }],
+				versionTags: [{ rc: "invalid" }] as const,
 			};
-			vi.mocked(loadConfig).mockResolvedValue(configInvalid);
+			// biome-ignore lint/suspicious/noExplicitAny: Required for mocking invalid config structure
+			vi.mocked(loadConfig).mockResolvedValue(configInvalid as any);
 
 			await expect(endPrCommand()).rejects.toThrow(
 				"Invalid tag configuration for: rc",
@@ -385,14 +388,14 @@ describe("endPrCommand", () => {
 							next: "stable",
 						},
 					},
-				],
+				] as const,
 				projects: [
 					{
 						path: "./unknown",
-						type: "unknown",
-						registries: ["custom"],
+						type: "unknown" as const,
+						registries: ["custom" as const],
 					},
-				],
+				] as const,
 			};
 			const trackingDataWithUnknown = {
 				...mockTrackingData,
@@ -400,7 +403,8 @@ describe("endPrCommand", () => {
 					"./unknown": "1.0.1-rc.1",
 				},
 			};
-			vi.mocked(loadConfig).mockResolvedValue(configWithUnknown);
+			// biome-ignore lint/suspicious/noExplicitAny: Required for mocking config with unknown project type
+			vi.mocked(loadConfig).mockResolvedValue(configWithUnknown as any);
 			vi.mocked(readFileContent).mockResolvedValue(
 				JSON.stringify(trackingDataWithUnknown),
 			);
