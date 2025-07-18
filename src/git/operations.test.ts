@@ -32,8 +32,10 @@ describe("git/operations", () => {
 	describe("getCurrentBranch", () => {
 		it("should return current branch name", async () => {
 			const mockStdout = "feature/test-branch\n";
+			// biome-ignore lint/suspicious/noExplicitAny: Required for mocking exec callback type
 			mockExec.mockImplementation(((command: string, callback: any) => {
 				callback(null, { stdout: mockStdout, stderr: "" });
+			// biome-ignore lint/suspicious/noExplicitAny: Required for mocking exec implementation
 			}) as any);
 
 			const result = await getCurrentBranch();
@@ -43,8 +45,10 @@ describe("git/operations", () => {
 
 		it("should handle empty branch name", async () => {
 			const mockStdout = "\n";
+			// biome-ignore lint/suspicious/noExplicitAny: Required for mocking exec callback type
 			mockExec.mockImplementation(((command: string, callback: any) => {
 				callback(null, { stdout: mockStdout, stderr: "" });
+			// biome-ignore lint/suspicious/noExplicitAny: Required for mocking exec implementation
 			}) as any);
 
 			const result = await getCurrentBranch();
@@ -52,8 +56,10 @@ describe("git/operations", () => {
 		});
 
 		it("should throw error on git command failure", async () => {
+			// biome-ignore lint/suspicious/noExplicitAny: Required for mocking exec callback type
 			mockExec.mockImplementation(((command: string, callback: any) => {
 				callback(new Error("Not a git repository"), null);
+			// biome-ignore lint/suspicious/noExplicitAny: Required for mocking exec implementation
 			}) as any);
 
 			await expect(getCurrentBranch()).rejects.toThrow("Not a git repository");
@@ -62,8 +68,10 @@ describe("git/operations", () => {
 
 	describe("createBranch", () => {
 		it("should create and checkout new branch", async () => {
+			// biome-ignore lint/suspicious/noExplicitAny: Required for mocking exec callback type
 			mockExec.mockImplementation(((command: string, callback: any) => {
 				callback(null, { stdout: "", stderr: "" });
+			// biome-ignore lint/suspicious/noExplicitAny: Required for mocking exec implementation
 			}) as any);
 
 			await createBranch("feature/new-feature");
@@ -75,8 +83,10 @@ describe("git/operations", () => {
 		});
 
 		it("should handle branch names with special characters", async () => {
+			// biome-ignore lint/suspicious/noExplicitAny: Required for mocking exec callback type
 			mockExec.mockImplementation(((command: string, callback: any) => {
 				callback(null, { stdout: "", stderr: "" });
+			// biome-ignore lint/suspicious/noExplicitAny: Required for mocking exec implementation
 			}) as any);
 
 			await createBranch("rc:feature/test-branch");
@@ -88,8 +98,10 @@ describe("git/operations", () => {
 		});
 
 		it("should throw error if branch creation fails", async () => {
+			// biome-ignore lint/suspicious/noExplicitAny: Required for mocking exec callback type
 			mockExec.mockImplementation(((command: string, callback: any) => {
 				callback(new Error("Branch already exists"), null);
+			// biome-ignore lint/suspicious/noExplicitAny: Required for mocking exec implementation
 			}) as any);
 
 			await expect(createBranch("existing-branch")).rejects.toThrow("Branch already exists");
@@ -98,8 +110,10 @@ describe("git/operations", () => {
 
 	describe("pullLatest", () => {
 		it("should pull latest changes", async () => {
+			// biome-ignore lint/suspicious/noExplicitAny: Required for mocking exec callback type
 			mockExec.mockImplementation(((command: string, callback: any) => {
 				callback(null, { stdout: "Already up to date.", stderr: "" });
+			// biome-ignore lint/suspicious/noExplicitAny: Required for mocking exec implementation
 			}) as any);
 
 			await pullLatest();
@@ -108,8 +122,10 @@ describe("git/operations", () => {
 		});
 
 		it("should throw error on pull failure", async () => {
+			// biome-ignore lint/suspicious/noExplicitAny: Required for mocking exec callback type
 			mockExec.mockImplementation(((command: string, callback: any) => {
 				callback(new Error("Network error"), null);
+			// biome-ignore lint/suspicious/noExplicitAny: Required for mocking exec implementation
 			}) as any);
 
 			await expect(pullLatest()).rejects.toThrow("Network error");
@@ -121,13 +137,17 @@ describe("git/operations", () => {
 			const mockFiles = "src/file1.ts\nsrc/file2.ts\nREADME.md\n";
 			
 			// Mock merge-base command
+			// biome-ignore lint/suspicious/noExplicitAny: Required for mocking exec callback type
 			mockExec.mockImplementationOnce(((command: string, callback: any) => {
 				callback(null, { stdout: "abc123\n", stderr: "" });
+			// biome-ignore lint/suspicious/noExplicitAny: Required for mocking exec implementation
 			}) as any);
 			
 			// Mock diff command
+			// biome-ignore lint/suspicious/noExplicitAny: Required for mocking exec callback type
 			mockExec.mockImplementationOnce(((command: string, callback: any) => {
 				callback(null, { stdout: mockFiles, stderr: "" });
+			// biome-ignore lint/suspicious/noExplicitAny: Required for mocking exec implementation
 			}) as any);
 
 			const result = await getChangedFiles("main");
@@ -136,13 +156,17 @@ describe("git/operations", () => {
 
 		it("should return empty array when no changes", async () => {
 			// Mock merge-base command
+			// biome-ignore lint/suspicious/noExplicitAny: Required for mocking exec callback type
 			mockExec.mockImplementationOnce(((command: string, callback: any) => {
 				callback(null, { stdout: "abc123\n", stderr: "" });
+			// biome-ignore lint/suspicious/noExplicitAny: Required for mocking exec implementation
 			}) as any);
 			
 			// Mock diff command with empty output
+			// biome-ignore lint/suspicious/noExplicitAny: Required for mocking exec callback type
 			mockExec.mockImplementationOnce(((command: string, callback: any) => {
 				callback(null, { stdout: "", stderr: "" });
+			// biome-ignore lint/suspicious/noExplicitAny: Required for mocking exec implementation
 			}) as any);
 
 			const result = await getChangedFiles("main");
@@ -153,13 +177,17 @@ describe("git/operations", () => {
 			const mockFiles = "src/fallback.ts\n";
 			
 			// Mock merge-base command failure
+			// biome-ignore lint/suspicious/noExplicitAny: Required for mocking exec callback type
 			mockExec.mockImplementationOnce(((command: string, callback: any) => {
 				callback(new Error("No merge base"), null);
+			// biome-ignore lint/suspicious/noExplicitAny: Required for mocking exec implementation
 			}) as any);
 			
 			// Mock fallback diff command
+			// biome-ignore lint/suspicious/noExplicitAny: Required for mocking exec callback type
 			mockExec.mockImplementationOnce(((command: string, callback: any) => {
 				callback(null, { stdout: mockFiles, stderr: "" });
+			// biome-ignore lint/suspicious/noExplicitAny: Required for mocking exec implementation
 			}) as any);
 
 			const result = await getChangedFiles("main");
@@ -168,14 +196,18 @@ describe("git/operations", () => {
 
 		it("should use custom base branch", async () => {
 			// Mock merge-base command
+			// biome-ignore lint/suspicious/noExplicitAny: Required for mocking exec callback type
 			mockExec.mockImplementationOnce(((command: string, callback: any) => {
 				expect(command).toContain("develop");
 				callback(null, { stdout: "abc123\n", stderr: "" });
+			// biome-ignore lint/suspicious/noExplicitAny: Required for mocking exec implementation
 			}) as any);
 			
 			// Mock diff command
+			// biome-ignore lint/suspicious/noExplicitAny: Required for mocking exec callback type
 			mockExec.mockImplementationOnce(((command: string, callback: any) => {
 				callback(null, { stdout: "file.ts\n", stderr: "" });
+			// biome-ignore lint/suspicious/noExplicitAny: Required for mocking exec implementation
 			}) as any);
 
 			await getChangedFiles("develop");
@@ -184,8 +216,10 @@ describe("git/operations", () => {
 
 	describe("commitChanges", () => {
 		it("should stage and commit changes", async () => {
+			// biome-ignore lint/suspicious/noExplicitAny: Required for mocking exec callback type
 			mockExec.mockImplementation(((command: string, callback: any) => {
 				callback(null, { stdout: "", stderr: "" });
+			// biome-ignore lint/suspicious/noExplicitAny: Required for mocking exec implementation
 			}) as any);
 
 			await commitChanges("feat: add new feature");
@@ -198,8 +232,10 @@ describe("git/operations", () => {
 		});
 
 		it("should handle commit messages with quotes", async () => {
+			// biome-ignore lint/suspicious/noExplicitAny: Required for mocking exec callback type
 			mockExec.mockImplementation(((command: string, callback: any) => {
 				callback(null, { stdout: "", stderr: "" });
+			// biome-ignore lint/suspicious/noExplicitAny: Required for mocking exec implementation
 			}) as any);
 
 			await commitChanges('feat: add "quoted" feature');
@@ -212,13 +248,17 @@ describe("git/operations", () => {
 
 		it("should throw error if commit fails", async () => {
 			// Mock git add success
+			// biome-ignore lint/suspicious/noExplicitAny: Required for mocking exec callback type
 			mockExec.mockImplementationOnce(((command: string, callback: any) => {
 				callback(null, { stdout: "", stderr: "" });
+			// biome-ignore lint/suspicious/noExplicitAny: Required for mocking exec implementation
 			}) as any);
 			
 			// Mock git commit failure
+			// biome-ignore lint/suspicious/noExplicitAny: Required for mocking exec callback type
 			mockExec.mockImplementationOnce(((command: string, callback: any) => {
 				callback(new Error("Nothing to commit"), null);
+			// biome-ignore lint/suspicious/noExplicitAny: Required for mocking exec implementation
 			}) as any);
 
 			await expect(commitChanges("test commit")).rejects.toThrow("Nothing to commit");
@@ -227,8 +267,10 @@ describe("git/operations", () => {
 
 	describe("pushChanges", () => {
 		it("should push to current branch", async () => {
+			// biome-ignore lint/suspicious/noExplicitAny: Required for mocking exec callback type
 			mockExec.mockImplementation(((command: string, callback: any) => {
 				callback(null, { stdout: "", stderr: "" });
+			// biome-ignore lint/suspicious/noExplicitAny: Required for mocking exec implementation
 			}) as any);
 
 			await pushChanges();
@@ -237,8 +279,10 @@ describe("git/operations", () => {
 		});
 
 		it("should push to specified branch with upstream", async () => {
+			// biome-ignore lint/suspicious/noExplicitAny: Required for mocking exec callback type
 			mockExec.mockImplementation(((command: string, callback: any) => {
 				callback(null, { stdout: "", stderr: "" });
+			// biome-ignore lint/suspicious/noExplicitAny: Required for mocking exec implementation
 			}) as any);
 
 			await pushChanges("feature/new-branch");
@@ -250,8 +294,10 @@ describe("git/operations", () => {
 		});
 
 		it("should throw error on push failure", async () => {
+			// biome-ignore lint/suspicious/noExplicitAny: Required for mocking exec callback type
 			mockExec.mockImplementation(((command: string, callback: any) => {
 				callback(new Error("Permission denied"), null);
+			// biome-ignore lint/suspicious/noExplicitAny: Required for mocking exec implementation
 			}) as any);
 
 			await expect(pushChanges()).rejects.toThrow("Permission denied");
@@ -261,8 +307,10 @@ describe("git/operations", () => {
 	describe("hasUncommittedChanges", () => {
 		it("should return true when there are uncommitted changes", async () => {
 			const mockStatus = "M  src/file.ts\n?? new-file.ts\n";
+			// biome-ignore lint/suspicious/noExplicitAny: Required for mocking exec callback type
 			mockExec.mockImplementation(((command: string, callback: any) => {
 				callback(null, { stdout: mockStatus, stderr: "" });
+			// biome-ignore lint/suspicious/noExplicitAny: Required for mocking exec implementation
 			}) as any);
 
 			const result = await hasUncommittedChanges();
@@ -270,8 +318,10 @@ describe("git/operations", () => {
 		});
 
 		it("should return false when working tree is clean", async () => {
+			// biome-ignore lint/suspicious/noExplicitAny: Required for mocking exec callback type
 			mockExec.mockImplementation(((command: string, callback: any) => {
 				callback(null, { stdout: "", stderr: "" });
+			// biome-ignore lint/suspicious/noExplicitAny: Required for mocking exec implementation
 			}) as any);
 
 			const result = await hasUncommittedChanges();
@@ -279,8 +329,10 @@ describe("git/operations", () => {
 		});
 
 		it("should return false for whitespace-only output", async () => {
+			// biome-ignore lint/suspicious/noExplicitAny: Required for mocking exec callback type
 			mockExec.mockImplementation(((command: string, callback: any) => {
 				callback(null, { stdout: "   \n  \n", stderr: "" });
+			// biome-ignore lint/suspicious/noExplicitAny: Required for mocking exec implementation
 			}) as any);
 
 			const result = await hasUncommittedChanges();
@@ -299,8 +351,10 @@ Changes not staged for commit:
 Untracked files:
   new-file.ts`;
 
+			// biome-ignore lint/suspicious/noExplicitAny: Required for mocking exec callback type
 			mockExec.mockImplementation(((command: string, callback: any) => {
 				callback(null, { stdout: mockStatus, stderr: "" });
+			// biome-ignore lint/suspicious/noExplicitAny: Required for mocking exec implementation
 			}) as any);
 
 			const result = await getGitStatus();
@@ -314,8 +368,10 @@ Your branch is up to date with 'origin/main'.
 
 nothing to commit, working tree clean`;
 
+			// biome-ignore lint/suspicious/noExplicitAny: Required for mocking exec callback type
 			mockExec.mockImplementation(((command: string, callback: any) => {
 				callback(null, { stdout: mockStatus, stderr: "" });
+			// biome-ignore lint/suspicious/noExplicitAny: Required for mocking exec implementation
 			}) as any);
 
 			const result = await getGitStatus();
