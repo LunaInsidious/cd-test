@@ -28,6 +28,10 @@ export async function runCLI(argv: string[]): Promise<void> {
 			console.error(`Error: ${error.message}`);
 			process.exit(1);
 		}
+		if (error instanceof Error && error.message.startsWith("Unknown command:")) {
+			console.error(`Error: ${error.message}`);
+			process.exit(1);
+		}
 		throw error;
 	} finally {
 		// Always close prompts interface to prevent hanging
