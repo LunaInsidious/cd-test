@@ -58,28 +58,28 @@ describe("endPrCommand", () => {
 		versionTags: [
 			{
 				rc: {
-					versionSuffixStrategy: "increment" as const,
+					versionSuffixStrategy: "increment",
 					next: "stable",
 				},
 			},
 			{
 				alpha: {
-					versionSuffixStrategy: "timestamp" as const,
+					versionSuffixStrategy: "timestamp",
 				},
 			},
-		] as const,
+		],
 		projects: [
 			{
 				path: "./frontend",
-				type: "typescript" as const,
-				registries: ["npm" as const],
+				type: "typescript",
+				registries: ["npm"],
 			},
 			{
 				path: "./backend",
-				type: "rust" as const,
-				registries: ["crates" as const],
+				type: "rust",
+				registries: ["crates"],
 			},
-		] as const,
+		],
 		releaseNotes: {
 			enabled: true,
 			template: "## Changes\\n\\n{{changes}}",
@@ -178,10 +178,10 @@ describe("endPrCommand", () => {
 				versionTags: [
 					{
 						alpha: {
-							versionSuffixStrategy: "timestamp" as const,
+							versionSuffixStrategy: "timestamp",
 						},
 					},
-				] as const,
+				],
 			};
 			const trackingDataAlpha = {
 				...mockTrackingData,
@@ -256,7 +256,7 @@ describe("endPrCommand", () => {
 		it("should handle invalid tag configuration", async () => {
 			const configInvalid = {
 				...mockConfig,
-				versionTags: [{ rc: "invalid" }] as const,
+				versionTags: [{ rc: "invalid" }],
 			};
 			// biome-ignore lint/suspicious/noExplicitAny: Required for mocking invalid config structure
 			vi.mocked(loadConfig).mockResolvedValue(configInvalid as any);
@@ -384,18 +384,18 @@ describe("endPrCommand", () => {
 				versionTags: [
 					{
 						rc: {
-							versionSuffixStrategy: "increment" as const,
+							versionSuffixStrategy: "increment",
 							next: "stable",
 						},
 					},
-				] as const,
+				],
 				projects: [
 					{
 						path: "./unknown",
-						type: "unknown" as const,
-						registries: ["custom" as const],
+						type: "unknown",
+						registries: ["custom"],
 					},
-				] as const,
+				],
 			};
 			const trackingDataWithUnknown = {
 				...mockTrackingData,
