@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 // Mock readline to prevent actual user input during tests
 const mockQuestion = vi.fn();
@@ -14,10 +14,10 @@ vi.mock("node:readline", () => ({
 
 // Import after mocking
 import {
-	askYesNo,
-	askInput,
 	askChoice,
+	askInput,
 	askMultipleChoice,
+	askYesNo,
 	closePrompts,
 } from "./prompts.js";
 

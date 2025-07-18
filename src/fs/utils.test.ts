@@ -1,20 +1,20 @@
-import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import {
-	mkdir,
 	writeFile as fsWriteFile,
+	mkdir,
 	readFile,
-	rmdir,
 	rm,
+	rmdir,
 } from "node:fs/promises";
-import { join } from "node:path";
 import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
 	ensureDir,
-	writeFile,
-	readFileContent,
-	updatePackageVersion,
-	updateCargoVersion,
 	getWorkspaceProjects,
+	readFileContent,
+	updateCargoVersion,
+	updatePackageVersion,
+	writeFile,
 } from "./utils.js";
 
 describe("fs/utils", () => {

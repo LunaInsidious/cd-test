@@ -1,15 +1,15 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { exec } from "node:child_process";
 import { promisify } from "node:util";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
-	getCurrentBranch,
-	createBranch,
-	pullLatest,
-	getChangedFiles,
 	commitChanges,
-	pushChanges,
-	hasUncommittedChanges,
+	createBranch,
+	getChangedFiles,
+	getCurrentBranch,
 	getGitStatus,
+	hasUncommittedChanges,
+	pullLatest,
+	pushChanges,
 } from "./operations.js";
 
 // Mock the exec function

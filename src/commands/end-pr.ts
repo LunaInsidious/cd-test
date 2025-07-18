@@ -1,6 +1,7 @@
 import { readdir, unlink } from "node:fs/promises";
 import { join } from "node:path";
 import { loadConfig } from "../config/parser.js";
+import type { Project } from "../config/schema.js";
 import { readFileContent } from "../fs/utils.js";
 import {
 	GitHubError,
@@ -10,7 +11,6 @@ import {
 } from "../git/github.js";
 import { commitChanges, pushChanges } from "../git/operations.js";
 import { askChoice, askYesNo } from "../interactive/prompts.js";
-import type { Project } from "../config/schema.js";
 
 export async function endPrCommand(): Promise<void> {
 	console.log("🏁 Finalizing release and merging PR...");

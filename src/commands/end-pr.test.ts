@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { endPrCommand } from "./end-pr.js";
 import type { Config } from "../config/schema.js";
+import { endPrCommand } from "./end-pr.js";
 
 // Mock all external dependencies
 vi.mock("node:fs/promises", () => ({
