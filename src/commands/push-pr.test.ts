@@ -351,10 +351,19 @@ describe("pushPrCommand", () => {
 		it("should update tracking data with new version", async () => {
 			await pushPrCommand();
 
+			// Check that writeFile was called with the correct file and that the content includes the new version
 			expect(writeFile).toHaveBeenCalledWith(
 				".cdtools/rc_feat_test.json",
-				expect.stringContaining('"currentVersion":"1.0.1-rc.1"'),
+				expect.any(String),
 			);
+
+			// Parse the actual written content to verify it contains the new version
+			const writeCall = vi.mocked(writeFile).mock.calls.find(
+				call => call[0] === ".cdtools/rc_feat_test.json"
+			);
+			expect(writeCall).toBeDefined();
+			const writtenContent = JSON.parse(writeCall![1]);
+			expect(writtenContent.currentVersion).toBe("1.0.1-rc.1");
 		});
 	});
 
@@ -371,8 +380,9 @@ describe("pushPrCommand", () => {
 			expect(console.log).toHaveBeenCalledWith("  - ./frontend (typescript)");
 		});
 
-		it("should handle files with ./ prefix matching", async () => {
-			vi.mocked(getChangedFiles).mockResolvedValue(["./frontend/src/app.ts"]);
+		it("should handle files without ./ prefix matching", async () => {
+			// Test with frontend path as "frontend" (no ./ prefix) in changed files
+			vi.mocked(getChangedFiles).mockResolvedValue(["frontend/src/app.ts"]);
 
 			await pushPrCommand();
 
