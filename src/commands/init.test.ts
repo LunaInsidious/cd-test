@@ -82,6 +82,7 @@ describe("commands/init", () => {
 		});
 
 		it("should handle existing .cdtools directory with overwrite", async () => {
+			// biome-ignore lint/suspicious/noExplicitAny: Required due to readdir type mismatch between string[] and Dirent[]
 			mockReaddir.mockResolvedValue(["existing-file.json"] as any);
 			mockAskYesNo.mockResolvedValue(true); // User chooses to overwrite
 			mockAskMultipleChoice.mockResolvedValue(["npm"]);
@@ -100,6 +101,7 @@ describe("commands/init", () => {
 		});
 
 		it("should cancel initialization if user declines overwrite", async () => {
+			// biome-ignore lint/suspicious/noExplicitAny: Required due to readdir type mismatch between string[] and Dirent[]
 			mockReaddir.mockResolvedValue(["existing-file.json"] as any);
 			mockAskYesNo.mockResolvedValue(false); // User chooses not to overwrite
 
