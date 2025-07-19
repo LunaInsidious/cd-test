@@ -18,7 +18,7 @@ TODOリスト
     - [ ] 現在のブランチの最新をpullする
     - [ ] releaseモードが`./cd-tools/settings.json`の`versionTags`フィールドに列挙されているのでそれを取得し、これからどのバージョンをリリースするPRを作ろうとしているかを選択させる。
     - [ ] また、新しいブランチ名をユーザーに入力させる
-    - [ ] 新しいブランチとして`[releaseモード]:[ユーザーが入力したブランチ名]`(例: rc:feat/hoge)を作成し、checkoutする
+    - [ ] 新しいブランチとして`[ユーザーが入力したブランチ名](rc)`(例: feat/hoge(rc))を作成し、checkoutする
     - [ ] `./cd-tools`配下に、`[releaseモード]-[ユーザーが入力したブランチ名(/などは-にescapeする)].json`(例: rc-feat-hoge.json)を、中身は`tag`フィールドとしてユーザーが選択したreleaseモードと、親ブランチが記載されたjsonを作成する(例: `{tag:"rc","parentBranch":"develop"}`)。これを今後はブランチ情報ファイルと呼ぶ。
 - フェーズ3
   - cd-tools-push-prコマンドで、

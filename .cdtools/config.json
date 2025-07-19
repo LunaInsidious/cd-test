@@ -1,0 +1,33 @@
+{
+	"versioningStrategy": "fixed",
+	"versionTags": [
+		{
+			"alpha": {
+				"versionSuffixStrategy": "timestamp"
+			}
+		},
+		{
+			"rc": {
+				"versionSuffixStrategy": "increment",
+				"next": "stable"
+			}
+		}
+	],
+	"projects": [
+		{
+			"path": "./frontend",
+			"type": "typescript",
+			"baseVersion": "1.0.0",
+			"bumpedVersions": [],
+			"deps": ["./backend", "package.json"],
+			"registries": ["npm"]
+		},
+		{
+			"path": "./backend",
+			"type": "rust",
+			"baseVersion": "1.1.0",
+			"bumpedVersions": ["patch", "minor"],
+			"registries": ["crates"]
+		}
+	]
+}
