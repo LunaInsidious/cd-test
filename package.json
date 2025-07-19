@@ -1,7 +1,6 @@
 {
 	"name": "cd-test",
 	"version": "1.0.0",
-	"main": "dist/index.js",
 	"bin": {
 		"cd-tools": "dist/index.js"
 	},
