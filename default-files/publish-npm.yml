@@ -1,4 +1,4 @@
-name: Publish Container Image
+name: Publish npm Package
 
 on:
   # TODO: 差分があるワークスペースとその依存関係についてのみ発火するようにする。
@@ -10,7 +10,7 @@ permissions:
 
 jobs:
   publish:
-    name: Publish Container Image
+    name: Publish npm Package
     runs-on: ubuntu-latest
     steps:
       - name: Check out the repo
