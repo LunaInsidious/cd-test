@@ -15,19 +15,12 @@
 	],
 	"projects": [
 		{
-			"path": "./frontend",
+			"path": "src",
 			"type": "typescript",
 			"baseVersion": "1.0.0",
 			"bumpedVersions": [],
-			"deps": ["./backend", "package.json"],
+			"deps": ["package.json"],
 			"registries": ["npm"]
-		},
-		{
-			"path": "./backend",
-			"type": "rust",
-			"baseVersion": "1.1.0",
-			"bumpedVersions": ["patch", "minor"],
-			"registries": ["crates"]
 		}
 	]
 }

@@ -36,6 +36,7 @@ export interface Config {
 export interface BranchInfo {
 	tag: string;
 	parentBranch: string;
+	workspaceUpdated?: Record<string, string>;
 }
 
 /**
@@ -93,6 +94,80 @@ export async function createBranchInfo(
 	} catch (error) {
 		throw new Error(
 			`Failed to create branch info file: ${error instanceof Error ? error.message : String(error)}`,
+		);
+	}
+}
+
+/**
+ * Parse current branch name to extract tag and original branch name
+ * Format: branchName(tag) -> returns { branchName, tag }
+ */
+export function parseBranchName(
+	fullBranchName: string,
+): { branchName: string; tag: string } | null {
+	const match = fullBranchName.match(/^(.+)\(([^)]+)\)$/);
+	if (!match || !match[1] || !match[2]) {
+		return null;
+	}
+	return {
+		branchName: match[1],
+		tag: match[2],
+	};
+}
+
+/**
+ * Load branch info file for current branch
+ */
+export async function loadBranchInfo(
+	currentBranch: string,
+): Promise<BranchInfo | null> {
+	const parsed = parseBranchName(currentBranch);
+	if (!parsed) {
+		return null;
+	}
+
+	const escapedBranchName = escapeBranchNameForFilename(parsed.branchName);
+	const filename = `.cdtools/${parsed.tag}-${escapedBranchName}.json`;
+
+	try {
+		const content = await readFile(filename, "utf-8");
+		return JSON.parse(content) as BranchInfo;
+	} catch {
+		return null;
+	}
+}
+
+/**
+ * Update branch info file with workspace updates
+ */
+export async function updateBranchInfo(
+	currentBranch: string,
+	workspaceUpdated: Record<string, string>,
+): Promise<void> {
+	const branchInfo = await loadBranchInfo(currentBranch);
+	if (!branchInfo) {
+		throw new Error("Branch info file not found");
+	}
+
+	// Create new branch info object to avoid mutation
+	const updatedBranchInfo: BranchInfo = {
+		...branchInfo,
+		workspaceUpdated,
+	};
+
+	const parsed = parseBranchName(currentBranch);
+	if (!parsed) {
+		throw new Error("Invalid branch name format");
+	}
+
+	const escapedBranchName = escapeBranchNameForFilename(parsed.branchName);
+	const filename = `.cdtools/${parsed.tag}-${escapedBranchName}.json`;
+
+	try {
+		await writeFile(filename, JSON.stringify(updatedBranchInfo, null, 2));
+	} catch (error) {
+		throw new Error(
+			`Failed to update branch info file: ${error instanceof Error ? error.message : String(error)}`,
 		);
 	}
 }

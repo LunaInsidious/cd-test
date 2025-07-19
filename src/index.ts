@@ -8,6 +8,7 @@
  */
 
 import { initCommand } from "./commands/init.js";
+import { pushPrCommand } from "./commands/push-pr.js";
 import { startPrCommand } from "./commands/start-pr.js";
 
 async function main(): Promise<void> {
@@ -25,7 +26,7 @@ async function main(): Promise<void> {
 				break;
 
 			case "push-pr":
-				console.log("push-pr command not yet implemented");
+				await pushPrCommand();
 				break;
 
 			case "end-pr":
@@ -33,6 +34,9 @@ async function main(): Promise<void> {
 				break;
 
 			case undefined:
+			case "help":
+			case "--help":
+			case "-h":
 				console.log("Usage: cd-tools <command>");
 				console.log("");
 				console.log("Commands:");

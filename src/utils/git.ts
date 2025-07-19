@@ -106,3 +106,103 @@ export async function createAndCheckoutBranch(
 		);
 	}
 }
+
+/**
+ * Get list of changed files since the last release
+ * First tries `git diff HEAD..@{u} --name-only`, then falls back to merge-base if no upstream
+ * @param parentBranch - The parent branch to compare against (validates with git check-ref-format)
+ */
+export async function getChangedFiles(parentBranch: string): Promise<string[]> {
+	await validateBranchName(parentBranch);
+
+	try {
+		// First try: compare with upstream
+		const output = await execGit(["diff", "HEAD..@{u}", "--name-only"]);
+		return output ? output.split("\n").filter(Boolean) : [];
+	} catch (upstreamError) {
+		// Check if error is about no upstream configured
+		const errorMessage =
+			upstreamError instanceof Error
+				? upstreamError.message
+				: String(upstreamError);
+		if (errorMessage.includes("no upstream configured for branch")) {
+			try {
+				// Fallback: use merge-base with parent branch
+				const mergeBase = await execGit(["merge-base", parentBranch, "HEAD"]);
+				const output = await execGit([
+					"diff",
+					mergeBase,
+					"HEAD",
+					"--name-only",
+				]);
+				return output ? output.split("\n").filter(Boolean) : [];
+			} catch (fallbackError) {
+				throw new GitError(
+					`Failed to get changed files using merge-base with '${parentBranch}': ${fallbackError instanceof Error ? fallbackError.message : String(fallbackError)}`,
+					`git diff $(git merge-base ${parentBranch} HEAD) HEAD --name-only`,
+				);
+			}
+		} else {
+			throw new GitError(
+				`Failed to get changed files from upstream: ${errorMessage}`,
+				"git diff HEAD..@{u} --name-only",
+			);
+		}
+	}
+}
+
+/**
+ * Commit changes with a specific message
+ * @param message - The commit message
+ */
+export async function commitChanges(message: string): Promise<void> {
+	try {
+		// Add all changes
+		await execGit(["add", "-A"]);
+
+		// Commit with message
+		await execGit(["commit", "-m", message]);
+	} catch (error) {
+		throw new GitError(
+			`Failed to commit changes: ${error instanceof Error ? error.message : String(error)}`,
+			`git commit -m "${message}"`,
+		);
+	}
+}
+
+/**
+ * Push changes to remote
+ * @param branchName - The branch to push (validates with git check-ref-format)
+ */
+export async function pushChanges(branchName: string): Promise<void> {
+	await validateBranchName(branchName);
+
+	try {
+		await execGit(["push", "origin", branchName]);
+	} catch (error) {
+		throw new GitError(
+			`Failed to push changes to '${branchName}': ${error instanceof Error ? error.message : String(error)}`,
+			`git push origin ${branchName}`,
+		);
+	}
+}
+
+/**
+ * Get list of available branches (local and remote)
+ */
+export async function getAvailableBranches(): Promise<string[]> {
+	try {
+		const output = await execGit(["branch", "-a", "--format=%(refname:short)"]);
+		return output
+			.split("\n")
+			.filter(Boolean)
+			.map((branch) => branch.replace(/^origin\//, ""))
+			.filter((branch, index, arr) => arr.indexOf(branch) === index) // Remove duplicates
+			.sort();
+	} catch (error) {
+		throw new GitError(
+			`Failed to get available branches: ${error instanceof Error ? error.message : String(error)}`,
+			"git branch -a --format=%(refname:short)",
+		);
+	}
+}
