@@ -1,0 +1,51 @@
+前提
+- cliのライブラリはenquirerを用いてください
+- 以下のTODOリストに記載してある要件はすべてテストを実装してください
+- cd-toolsは現状npmとdockerのみ対応とするが、後々rust(crates.io)などにも対応する予定のため、npm依存の箇所などは適切に関数に切り出すこと(バージョンアップ時のpackage.jsonの更新なども同様)
+- conventional commitsのかいせき
+- jsdocやコメントも適切に記載すること
+
+TODOリスト
+- フェーズ1
+  - cd-tools-initのコマンドで、
+    - [ ]`/default-files/config.json`をインストール先の`/.cd-tools`配下にコピー
+  - その後、"Please select the registry you plan to release."と標準出力に出して、選択肢を表示し、回答(複数回答可)で回答に応じてそれぞれのファイルをインストール先の`/.cd-tools`配下にコピーする
+    - [ ] npm: `/default-files/publish-npm.yml`
+    - [ ] docker hub(ghcr.io): `/default-files/publish-container-image.yml`
+- フェーズ2
+  - cd-tools-start-prコマンドで、
+    - [ ] cd-tools-initがされていなかったら(`/cd-tools/config.json`がなければ)エラーで終了
+    - [ ] 現在のブランチの最新をpullする
+    - [ ] releaseモードが`./cd-tools/settings.json`の`versionTags`フィールドに列挙されているのでそれを取得し、これからどのバージョンをリリースするPRを作ろうとしているかを選択させる。
+    - [ ] また、新しいブランチ名をユーザーに入力させる
+    - [ ] 新しいブランチとして`[releaseモード]:[ユーザーが入力したブランチ名]`(例: rc:feat/hoge)を作成し、checkoutする
+    - [ ] `./cd-tools`配下に、`[releaseモード]-[ユーザーが入力したブランチ名(/などは-にescapeする)].json`(例: rc-feat-hoge.json)を、中身は`tag`フィールドとしてユーザーが選択したreleaseモードと、親ブランチが記載されたjsonを作成する(例: `{tag:"rc","parentBranch":"develop"}`)。これを今後はブランチ情報ファイルと呼ぶ。
+- フェーズ3
+  - cd-tools-push-prコマンドで、
+    - [ ] cd-tools-initがされていなかったら(`/cd-tools/config.json`がなければ)エラーで終了
+    - [ ] cd-tools-start-prがされていなかったら(ブランチ情報ファイルがなければ)エラーで終了
+    - [ ] リリースする変更がpatchかminorかmajorかを選択させる(`/.cd-tools/config.json`の`versioningStrategy`が`independent`の場合は、各ワークスペース毎に選択できるようにする)(ここは後々`/cd-tools/config.json`の設定でconventional commitsを読み取れる形も可能にする予定なので、関数で切り出して、簡単に切り替えられるようにしておく)
+    - [ ] `/.cd-tools/config.json`の各ワークスペースの`bumpedVersions`を参照して、ユーザーが選択した変更(patch or minor or major)、またはそれより小さい変更(majorに対してのpatch,minor,major。minorに対してのpatch,minor。patchに対してのpatch)が今回のリリースサイクルにリリースされたかを確認する。
+      - [ ] リリースされていればベースのバージョン(○.△.×-(タグ名).xの○.△.×の部分)に変更はなし
+      - [ ] リリースされていなければ、ユーザーが選択した変更分のバージョンを上げる(rcリリース用のブランチで、現在のバージョンが1.0.1-rc.0で、`bumpedVersions`が`["patch"]`で、今回のリリースでユーザーが`minor`を選択した場合、バージョンは1.1.0-rc.1に上げる)
+    - `/.cd-tools/config.json`の`versioningStrategy`がfixedの場合
+      - [ ] すべてのワークスペースについて、ブランチ情報ファイルのリリースモードに基づいて、そのリリースモードの`versionSuffixStrategy`を確認し、suffixを`timestamp`なら現在時刻の`YYYYMMDDhhmmss`を、`increment`なら、もしsuffixがなければ`[tag名].0`,suffixがあれば`[tag名].(前のsuffix+1)`とする。
+    - `/.cd-tools/config.json`の`versioningStrategy`がindependentの場合
+      - [ ] 前回のリリースから差分があるワークスペースと、差分(package.jsonなども含む。`/.cd-tools/config.json`の各ワークスペースの`deps`を参照)を依存関係に持つワークスペースについて、各バージョン管理フィールドを更新する。
+        - [ ] 依存先に差分があるだけなら、それは必ずpatchアップデート
+      - [ ] 前回のリリースからの差分検知は、まず`git diff HEAD..@{u} --name-only`(parentBranchはブランチ情報ファイルから取得できる)を実行して、それで`no upstream configured for branch`のエラーが出たら(ブランチを作成してからpushをしていないということなので)`git diff $(git merge-base main HEAD) HEAD --name-only`を実行する。
+        - [ ] 差分として見つかったファイル名から、`/.cd-tools/config.json`の各ワークスペースの`deps`を参考に、updateするべきワークスペースを判別する
+    - [ ] ブランチ情報ファイルと、各言語ごとのバージョン管理フィールド(tsなら各package.jsonのversionフィールド)にこれからリリースする予定のワークスペースを記載する(ブランチ情報ファイルの例:`{workspaceUpdated:[{"package-a":"1.0.1-rc.0","package-b":"2.0.1-alpha.2"}]}`のフィールドを追加する)
+    - [ ] これまで発生した差分をcommit,pushする(commit messageは`commit for [リリースするワークスペース名1](リリースバージョン1), [リリースするワークスペース名2](リリースバージョン2), …`みたいなのを想定)
+    - [ ] PRを作成していなければ`gh pr create`コマンドでPRを作成する。(`gh`コマンドはこのライブラリを使う要件として記載するので、execコマンドなどで直接実行してよい)
+- フェーズ4
+  - cd-tools-end-prコマンドで、
+    - [ ] cd-tools-initがされていなかったら(`/cd-tools/config.json`がなければ)エラーで終了
+    - [ ] cd-tools-start-prがされていなかったら(ブランチ情報ファイルがなければ)エラーで終了
+    - [ ] PRが作成されていなかったらエラーで終了(`$(gh pr status --jq .currentBranch.url --json url)を実行し、空かを確認`)
+    - [ ] `/.cd-tools/config.json`の、現在のPRがリリースしているバージョンタグの`next`の設定に従ってブランチ情報ファイルの`workspaceUpdated`や各言語ごとのバージョン管理フィールドを更新する(`next`のtagの`versionSuffixStrategy`が`increment`だった場合は、`git tag --list`で前回のタグを確認してincrementする)
+    - [ ] push-prの時と同様の流れでバージョンアップの変更をcommit,pushし、リリース用のCDが流れるようにする
+    - [ ] ブランチ情報ファイルを削除し、そのcommitをpushする(最後の後片付け)
+    - [ ] `gh pr merge --squash "$pr_url$`を実行し、マージ
+- フェーズ5
+  - [ ] `/default-files/publish-npm.yml`,`/default-files/publish-container-image.yml`について、TODOとして記載しているように、ブランチ情報ファイルの`workspaceUpdated`に基づいて並列で各ワークスペースのリリースができるようにする。

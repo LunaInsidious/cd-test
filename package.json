@@ -1,9 +1,13 @@
 {
-	"name": "cd-test",
-	"version": "1.0.0",
+	"name": "cd-tools",
+	"version": "1.0.1",
 	"bin": {
 		"cd-tools": "dist/index.js"
 	},
+	"files": [
+		"dist",
+		"default-files"
+	],
 	"type": "module",
 	"scripts": {
 		"lint": "biome check",
@@ -20,16 +24,18 @@
 	"author": "",
 	"license": "MIT",
 	"description": "CD (Continuous Deployment) tool for monorepo management",
-	"dependencies": {
-		"zod": "^3.23.8"
-	},
 	"devDependencies": {
-		"@biomejs/biome": "1.9.4",
+		"@biomejs/biome": "2.1.2",
 		"@tsconfig/strictest": "^2.0.5",
 		"@types/node": "^22.15.2",
 		"@vitest/coverage-v8": "^3.2.4",
 		"typescript": "^5.8.3",
 		"typescript-language-server": "^4.3.4",
-		"vitest": "^3.2.4"
+		"vitest": "^3.2.4",
+		"zod": "^4.0.5",
+		"@types/prompts": "2.4.9"
+	},
+	"dependencies": {
+		"prompts": "2.4.2"
 	}
 }
