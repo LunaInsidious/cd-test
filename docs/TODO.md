@@ -48,4 +48,5 @@ TODOリスト
     - [ ] ブランチ情報ファイルを削除し、そのcommitをpushする(最後の後片付け)
     - [ ] `gh pr merge --squash "$pr_url$`を実行し、マージ
 - フェーズ5
+  - [ ] stableリリースの場合、`bumpedVersions`をクリアする(理由は`/docs/answer.md`を参照)
   - [ ] `/default-files/publish-npm.yml`,`/default-files/publish-container-image.yml`について、TODOとして記載しているように、ブランチ情報ファイルの`workspaceUpdated`に基づいて並列で各ワークスペースのリリースができるようにする。
