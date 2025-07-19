@@ -2,10 +2,6 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-DO NOT install or use the git cli with the environment_run_cmd tool. All environment tools will handle git operations for you. Changing ".git" yourself will compromise the integrity of your environment.
-
-You MUST inform the user how to view your work using `container-use log <env_id>` AND `container-use checkout <env_id>`. Failure to do this will make your work inaccessible to others.
-
 ## Development Commands
 
 ### Build
@@ -79,4 +75,32 @@ The tool will use `.cdtools/config.json` for configuration, supporting:
 ## Architecture Decision Records
 All significant architectural decisions, including library additions, are documented in `docs/ADR.md`.
 
-ALWAYS use ONLY Environments for ANY and ALL file, code, or shell operations—NO EXCEPTIONS—even for simple or generic requests.
+## Project-Specific Requirements
+
+### Directory Structure
+- Configuration and tracking files: `/.cdtools` (no hyphen)
+- Branch info files: Use hyphens (e.g., `rc-feat-hoge.json`)
+- Other files: Use camelCase (e.g., `config.json`)
+
+### Versioning Strategy
+- **fixed**: All workspaces use the same version (follows updates even without changes)
+- **independent**: Only changed workspaces and their dependents are versioned
+
+### Version Suffix Format
+- Timestamp format: `YYYYMMDDhhmmss`
+- Increment format: `[tag].0`, `[tag].1`, etc.
+
+### Dependencies Management
+- `deps` field: List of file paths (not just package.json) that trigger workspace updates
+- Includes Dockerfiles, configuration files, etc.
+
+### Bump Tracking
+- `bumpedVersions`: Tracks version bump types (patch/minor/major) within a release cycle
+- Cleared on stable release
+
+### Error Handling
+- Missing GitHub CLI: Show `gh auth status` output + "Github CLI でログインできていないようです。"
+- Network errors: Display error message as-is (no retry)
+
+### UI Library
+- Use `prompts` library (not `enquirer` or `readline`)

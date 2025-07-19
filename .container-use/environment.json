@@ -1,6 +1,0 @@
-{
-	"workdir": "/workdir",
-	"base_image": "node:20-slim",
-	"setup_commands": ["apt-get update \u0026\u0026 apt-get install -y git"],
-	"Locked": false
-}

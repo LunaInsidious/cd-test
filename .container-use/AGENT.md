@@ -1,1 +1,0 @@
-TypeScript project for CD tool development. Uses npm for package management, Vitest for testing, Biome for linting/formatting. Main commands: npm run build, npm test, npm run lint, npm run format. TDD approach required.
