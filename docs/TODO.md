@@ -2,7 +2,7 @@
 - cliのライブラリはenquirerを用いてください
 - 以下のTODOリストに記載してある要件はすべてテストを実装してください
 - cd-toolsは現状npmとdockerのみ対応とするが、後々rust(crates.io)などにも対応する予定のため、npm依存の箇所などは適切に関数に切り出すこと(バージョンアップ時のpackage.jsonの更新なども同様)
-- conventional commitsのかいせき
+- conventional commitsの解析は今回はスコープ外
 - jsdocやコメントも適切に記載すること
 
 TODOリスト
