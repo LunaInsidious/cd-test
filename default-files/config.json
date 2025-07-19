@@ -29,9 +29,5 @@
 			"bumpedVersions": ["patch", "minor"],
 			"registries": ["crates"]
 		}
-	],
-	"releaseNotes": {
-		"enabled": true,
-		"template": "## Changes\n\n{{changes}}\n\n## Contributors\n\n{{contributors}}"
-	}
+	]
 }
