@@ -11,6 +11,10 @@ on:
         description: 'Version to publish for the workspace'
         required: true
         type: string
+      release_tag:
+        description: 'Release tag (e.g., alpha, rc, stable)'
+        required: true
+        type: string
 
 permissions:
   contents: write
@@ -52,15 +56,23 @@ jobs:
         run: npm ci --omit=dev
       # Optional: Build the package if needed
       - name: build package
-        run: npm run build ${{ inputs.build-execute-workspace }}
+        run: tsc --build ${{ inputs.build-execute-workspace }}
       - name: Publish npm package
         working-directory: ${{ inputs.workspace_path }}
         run: |
-          echo "@${GITHUB_REPOSITORY_OWNER}:registry=https://npm.pkg.github.com" >> .npmrc
-          echo "//npm.pkg.github.com/:_authToken=${NPM_AUTH_TOKEN}" >> .npmrc
-          npm publish
+          echo "registry=https://registry.npmjs.org/" >> .npmrc
+          echo "//registry.npmjs.org/:_authToken=${NPM_AUTH_TOKEN}" >> .npmrc
+
+          # Set npm tag based on release tag
+          if [ "${{ inputs.release_tag }}" = "stable" ]; then
+            echo "📦 Publishing with 'latest' tag for stable release"
+            npm publish
+          else
+            echo "📦 Publishing with '${{ inputs.release_tag }}' tag for pre-release"
+            npm publish --tag "${{ inputs.release_tag }}"
+          fi
         env:
-          NPM_AUTH_TOKEN: ${{secrets.GITHUB_TOKEN}}
+          NPM_AUTH_TOKEN: ${{secrets.NPM_TOKEN}}
       - name: Add Tag
         run: |
           TAG_NAME="${WORKSPACE_PATH//\//-}-v${VERSION}"
