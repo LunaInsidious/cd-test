@@ -258,15 +258,14 @@ describe("analyze-workspaces.sh Script Tests", () => {
 			}
 		});
 
-		it("should fail when branch info file is missing", async () => {
+		it("should return empty results when branch info file is missing", async () => {
 			await execAsync("git checkout -b feat/missing\\(alpha\\)");
 
-			try {
-				await execAsync(`${scriptPath} npm`);
-				expect.fail("Should have thrown an error");
-			} catch (error) {
-				expect(error.message).toContain("Branch info file not found");
-			}
+			const { stdout } = await execAsync(`${scriptPath} npm`);
+
+			expect(stdout).toContain("has-npm=false");
+			expect(stdout).toContain("release-tag=stable");
+			expect(stdout).toContain('npm-matrix={"include":[]}');
 		});
 
 		it("should handle empty workspaceUpdated", async () => {
