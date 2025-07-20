@@ -176,7 +176,8 @@ export async function endPrCommand(): Promise<void> {
 		if (Object.keys(newVersions).length > 0) {
 			console.log("\n📋 Next version updates:");
 			for (const [projectPath, version] of Object.entries(newVersions)) {
-				console.log(`  • ${projectPath}: ${version}`);
+				const packageName = await getPackageName(projectPath);
+				console.log(`  • ${packageName}: ${version}`);
 			}
 
 			// Update version files
@@ -262,6 +263,9 @@ async function calculateNextVersions(
 		return result;
 	}
 
+	// Check if the next tag is a stable release
+	const isNextStableRelease = isStableTag(config, nextTag);
+
 	for (const [projectPath] of Object.entries(branchInfo.workspaceUpdated)) {
 		const project = config.projects.find((p) => p.path === projectPath);
 		if (!project) {
@@ -269,12 +273,26 @@ async function calculateNextVersions(
 			continue;
 		}
 
-		// Calculate new version with next tag
-		const newVersion = await generateVersionWithSuffix(
-			project.baseVersion,
-			nextTag,
-			versionSuffixStrategy,
-		);
+		let newVersion: string;
+		if (isNextStableRelease) {
+			// For stable releases, no suffix - use the current workspace version without suffix
+			const currentWorkspaceVersion = branchInfo.workspaceUpdated[projectPath];
+			if (currentWorkspaceVersion) {
+				// Remove suffix from current version (e.g., "1.1.0-rc.0" -> "1.1.0")
+				const versionParts = currentWorkspaceVersion.split("-");
+				newVersion = versionParts[0] || currentWorkspaceVersion;
+			} else {
+				// Fallback to base version if no workspace version exists
+				newVersion = project.baseVersion;
+			}
+		} else {
+			// For non-stable releases, generate version with suffix
+			newVersion = await generateVersionWithSuffix(
+				project.baseVersion,
+				nextTag,
+				versionSuffixStrategy,
+			);
+		}
 
 		result[projectPath] = newVersion;
 	}
