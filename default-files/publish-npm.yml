@@ -56,7 +56,7 @@ jobs:
         run: npm ci --omit=dev
       # Optional: Build the package if needed
       - name: build package
-        run: npm run build ${{ inputs.build-execute-workspace }}
+        run: tsc --build ${{ inputs.build-execute-workspace }}
       - name: Publish npm package
         working-directory: ${{ inputs.workspace_path }}
         run: |
