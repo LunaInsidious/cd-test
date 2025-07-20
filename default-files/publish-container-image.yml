@@ -11,6 +11,10 @@ on:
         description: 'Version to publish for the workspace'
         required: true
         type: string
+      release_tag:
+        description: 'Release tag (e.g., alpha, rc, stable)'
+        required: true
+        type: string
 
 permissions:
   contents: write
@@ -84,9 +88,10 @@ jobs:
             latest=false
           tags: |
             type=semver,pattern={{ version }},value=${{ inputs.workspace_version }}
-            type=semver,pattern={{major}}.{{minor}},value=${{ inputs.workspace_version }}
-            type=semver,pattern={{major}},value=${{ inputs.workspace_version }}
-            type=raw,value=latest
+            type=semver,pattern={{major}}.{{minor}},value=${{ inputs.workspace_version }},enable=${{ inputs.release_tag == 'stable' }}
+            type=semver,pattern={{major}},value=${{ inputs.workspace_version }},enable=${{ inputs.release_tag == 'stable' }}
+            type=raw,value=latest,enable=${{ inputs.release_tag == 'stable' }}
+            type=raw,value=${{ inputs.release_tag }},enable=${{ inputs.release_tag != 'stable' }}
       - name: Build and push Docker image
         if: >-
           ${{steps.tag-exists.outputs.tag_exists == 0}}

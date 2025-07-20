@@ -31,7 +31,7 @@ jobs:
             echo "❌ analyze-workspaces.sh not found! Run 'cd-tools init' to set up required scripts."
             exit 1
           fi
-          
+
           chmod +x .github/scripts/analyze-workspaces.sh
           echo "✅ analyze-workspaces.sh is ready"
 

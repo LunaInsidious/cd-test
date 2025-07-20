@@ -108,6 +108,7 @@ describe("analyze-workspaces.sh Script Tests", () => {
 			const { stdout } = await execAsync(`${scriptPath} npm`);
 
 			expect(stdout).toContain("has-npm=true");
+			expect(stdout).toContain("release-tag=alpha");
 			expect(stdout).toMatch(/npm-matrix=.*workspace_path.*packages\/frontend/);
 			expect(stdout).toMatch(
 				/npm-matrix=.*workspace_path.*packages\/fullstack/,
@@ -133,6 +134,7 @@ describe("analyze-workspaces.sh Script Tests", () => {
 			const { stdout } = await execAsync(`${scriptPath} npm`);
 
 			expect(stdout).toContain("has-npm=false");
+			expect(stdout).toContain("release-tag=alpha");
 			expect(stdout).toContain('npm-matrix={"include":[]}');
 		});
 	});
@@ -158,6 +160,7 @@ describe("analyze-workspaces.sh Script Tests", () => {
 			const { stdout } = await execAsync(`${scriptPath} docker`);
 
 			expect(stdout).toContain("has-docker=true");
+			expect(stdout).toContain("release-tag=alpha");
 			expect(stdout).toMatch(
 				/docker-matrix=.*workspace_path.*packages\/backend/,
 			);
@@ -185,6 +188,7 @@ describe("analyze-workspaces.sh Script Tests", () => {
 			const { stdout } = await execAsync(`${scriptPath} docker`);
 
 			expect(stdout).toContain("has-docker=false");
+			expect(stdout).toContain("release-tag=alpha");
 			expect(stdout).toContain('docker-matrix={"include":[]}');
 		});
 	});
@@ -212,6 +216,7 @@ describe("analyze-workspaces.sh Script Tests", () => {
 
 			expect(stdout).toContain("has-npm=true");
 			expect(stdout).toContain("has-docker=true");
+			expect(stdout).toContain("release-tag=alpha");
 			expect(stdout).toMatch(/npm-matrix=.*packages\/frontend/);
 			expect(stdout).toMatch(/npm-matrix=.*packages\/fullstack/);
 			expect(stdout).toMatch(/docker-matrix=.*packages\/backend/);
@@ -284,6 +289,7 @@ describe("analyze-workspaces.sh Script Tests", () => {
 
 			expect(stdout).toContain("has-npm=false");
 			expect(stdout).toContain("has-docker=false");
+			expect(stdout).toContain("release-tag=alpha");
 			expect(stdout).toContain('npm-matrix={"include":[]}');
 			expect(stdout).toContain('docker-matrix={"include":[]}');
 		});
@@ -310,6 +316,7 @@ describe("analyze-workspaces.sh Script Tests", () => {
 			const { stdout } = await execAsync(`${scriptPath} npm`);
 
 			expect(stdout).toContain("has-npm=true");
+			expect(stdout).toContain("release-tag=alpha");
 		});
 
 		it("should fallback to workspaceUpdated search", async () => {
@@ -332,6 +339,7 @@ describe("analyze-workspaces.sh Script Tests", () => {
 			const { stdout } = await execAsync(`${scriptPath} npm`);
 
 			expect(stdout).toContain("has-npm=true");
+			expect(stdout).toContain("release-tag=alpha");
 		});
 	});
 
@@ -353,6 +361,9 @@ describe("analyze-workspaces.sh Script Tests", () => {
 			);
 
 			const { stdout } = await execAsync(`${scriptPath} npm`);
+
+			// Verify tag output
+			expect(stdout).toContain("release-tag=alpha");
 
 			// Extract and validate JSON
 			const npmMatrixMatch = stdout.match(/npm-matrix=(.+)/);

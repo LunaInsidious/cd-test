@@ -49,7 +49,10 @@ jobs:
           echo "✅ Version verified: $ACTUAL_VERSION"
       - name: Install dependencies
         working-directory: ${{ inputs.workspace_path }}
-        run: npm install --immutable --immutable-cache --check-cache
+        run: npm ci --omit=dev
+      # Optional: Build the package if needed
+      - name: build package
+        run: npm run build ${{ inputs.build-execute-workspace }}
       - name: Publish npm package
         working-directory: ${{ inputs.workspace_path }}
         run: |
