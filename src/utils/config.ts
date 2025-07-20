@@ -90,7 +90,7 @@ export async function createBranchInfo(
 	};
 
 	try {
-		await writeFile(filename, JSON.stringify(branchInfo, null, "\t"));
+		await writeFile(filename, `${JSON.stringify(branchInfo, null, "\t")}\n`);
 	} catch (error) {
 		throw new Error(
 			`Failed to create branch info file: ${error instanceof Error ? error.message : String(error)}`,
@@ -164,7 +164,10 @@ export async function updateBranchInfo(
 	const filename = `.cdtools/${parsed.tag}-${escapedBranchName}.json`;
 
 	try {
-		await writeFile(filename, JSON.stringify(updatedBranchInfo, null, "\t"));
+		await writeFile(
+			filename,
+			`${JSON.stringify(updatedBranchInfo, null, "\t")}\n`,
+		);
 	} catch (error) {
 		throw new Error(
 			`Failed to update branch info file: ${error instanceof Error ? error.message : String(error)}`,
