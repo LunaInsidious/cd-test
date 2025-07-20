@@ -1,5 +1,5 @@
 {
-	"versioningStrategy": "fixed",
+	"versioningStrategy": "independent",
 	"versionTags": [
 		{
 			"alpha": {
