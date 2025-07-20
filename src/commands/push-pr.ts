@@ -104,7 +104,8 @@ export async function pushPrCommand(): Promise<void> {
 
 	console.log("\n📋 Version updates:");
 	for (const [projectPath, version] of Object.entries(newVersions)) {
-		console.log(`  • ${projectPath}: ${version}`);
+		const packageName = await getPackageName(projectPath);
+		console.log(`  • ${packageName}: ${version}`);
 	}
 
 	// Determine which projects need updates based on file changes

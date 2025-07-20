@@ -75,7 +75,10 @@ import {
 	checkPrExists,
 	createPullRequestInteractive,
 } from "../utils/github.js";
-import { updateMultipleProjectVersions, getPackageName } from "../utils/version-updater.js";
+import {
+	getPackageName,
+	updateMultipleProjectVersions,
+} from "../utils/version-updater.js";
 
 // Mock typed functions
 const mockPrompts = vi.mocked(prompts);
