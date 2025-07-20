@@ -36,7 +36,7 @@ fi
 if [ ! -f "$BRANCH_INFO_FILE" ]; then
     echo "ℹ️  Branch info file not found: $BRANCH_INFO_FILE" >&2
     echo "✅ No workspaces to process (likely after end-pr cleanup), returning empty results" >&2
-    
+
     # Return empty matrices based on filter
     case "$REGISTRY_FILTER" in
         npm)
@@ -77,7 +77,7 @@ if [ ! -f "$BRANCH_INFO_FILE" ]; then
             fi
             ;;
     esac
-    
+
     echo "🔍 Analysis complete: No workspaces found" >&2
     exit 0
 fi
