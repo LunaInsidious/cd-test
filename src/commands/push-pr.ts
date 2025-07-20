@@ -592,7 +592,9 @@ async function getNextIncrement(
 	try {
 		// Look for tags like "1.0.0-alpha.0", "1.0.0-alpha.1", etc.
 		const tagPattern = `${baseVersion}-${tag}.*`;
+		console.log(`🔍 Checking existing tags for pattern: ${tagPattern}`);
 		const existingTags = await getTagsMatchingPattern(tagPattern);
+		console.log(`📋 Found ${existingTags.length} matching tags:`, existingTags);
 
 		// Create regex pattern to match version tags with increment numbers
 		const escapedBaseVersion = escapeRegexMetaCharacters(baseVersion);
