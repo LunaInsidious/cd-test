@@ -1,17 +1,25 @@
 # CD Tools
 
-A TypeScript-based Continuous Deployment (CD) tool designed for monorepo management with support for multiple programming languages and flexible versioning strategies.
+A TypeScript-based Continuous Deployment (CD) tool designed for monorepo
+management with flexible versioning strategies and GitHub integration.
 
 ## ✨ Features
 
-- **🏷️ Flexible Version Management**: Support for user-defined version tags with timestamp or increment strategies
-- **📦 Monorepo Support**: Handle multiple projects with different languages in a single repository
-- **🔧 Multi-Language Support**: TypeScript, Rust, and extensible architecture for other languages
-- **🚀 Multiple Registry Support**: npm, crates.io, container registries
-- **📋 Automated Workflows**: GitHub Actions workflow generation for each registry type
-- **🔄 Interactive CLI**: User-friendly prompts for tag selection and branch management
-- **🎯 Differential Releases**: Smart detection of changed projects with dependency management
-- **🔗 GitHub Integration**: Direct GitHub CLI integration for PR and release management
+- **🏷️ Flexible Version Management**: Support for user-defined version tags with
+  timestamp or increment strategies
+- **📦 Monorepo Support**: Handle multiple projects with different languages in
+  a single repository
+- **🔧 Multi-Language Support**: TypeScript/npm and Rust/crates.io with
+  extensible architecture
+- **🚀 Registry Support**: npm, crates.io, and container registries
+- **📋 Automated Workflows**: GitHub Actions workflow generation for each
+  registry type
+- **🔄 Interactive CLI**: User-friendly prompts for version bumps and tag
+  selection
+- **🎯 Smart Change Detection**: Automatic detection of changed projects with
+  dependency tracking
+- **🔗 GitHub Integration**: Direct GitHub CLI integration for PR and release
+  management
 
 ## 📋 Prerequisites
 
@@ -32,13 +40,13 @@ A TypeScript-based Continuous Deployment (CD) tool designed for monorepo managem
    # Install GitHub CLI
    # On macOS
    brew install gh
-   
+
    # On Ubuntu/Debian
    sudo apt install gh
-   
+
    # On Windows
    winget install --id GitHub.cli
-   
+
    # Or download from https://cli.github.com/
    ```
 
@@ -46,37 +54,25 @@ A TypeScript-based Continuous Deployment (CD) tool designed for monorepo managem
    ```bash
    # Authenticate with GitHub
    gh auth login
-   
+
    # Verify authentication
    gh auth status
    ```
 
 ### Required GitHub Permissions
 
-The GitHub CLI must be authenticated with a token that has the following permissions:
+The GitHub CLI must be authenticated with a token that has the following
+permissions:
 
 #### Repository Permissions (Required):
+
 - **Contents**: Write ✅ (for creating commits)
 - **Metadata**: Read ✅ (for basic repository info)
 - **Pull requests**: Write ✅ (for creating/updating/merging PRs)
-- **Actions**: Read ✅ (for checking CI status)
 
-#### Optional Permissions (for enhanced features):
-- **Administration**: Write (for creating releases)
-- **Issues**: Write (for linking issues to PRs)
+#### Personal Access Token Scopes (if using token authentication):
 
-#### Authentication Setup:
-```bash
-# Interactive authentication (recommended)
-gh auth login
-
-# Or use a personal access token
-gh auth login --with-token < token.txt
-```
-
-**Personal Access Token Scopes** (if using token authentication):
 - `repo` (Full control of private repositories)
-- `workflow` (Update GitHub Action workflows)
 
 ## 🚀 Installation
 
@@ -112,7 +108,7 @@ npm run build
 3. **Configure your project** by editing `.cdtools/config.json`:
    ```json
    {
-     "baseVersion": "1.0.0",
+     "versioningStrategy": "fixed",
      "versionTags": [
        {
          "alpha": {
@@ -130,18 +126,17 @@ npm run build
        {
          "path": "./frontend",
          "type": "typescript",
+         "baseVersion": "1.0.0",
+         "deps": ["./backend", "package.json"],
          "registries": ["npm"]
        },
        {
          "path": "./backend",
          "type": "rust",
+         "baseVersion": "1.1.0",
          "registries": ["crates"]
        }
-     ],
-     "releaseNotes": {
-       "enabled": true,
-       "template": "## Changes\n\n{{changes}}\n\n## Contributors\n\n{{contributors}}"
-     }
+     ]
    }
    ```
 
@@ -149,17 +144,18 @@ npm run build
    ```bash
    cd-tools start-pr
    ```
-   - Select version tag (alpha, rc, etc.)
+   - Select version tag (alpha, rc, stable)
    - Enter branch name
-   - Creates `rc:branch-name` branch
+   - Creates `branchName(tag)` branch
    - Sets up release tracking
 
 5. **Update versions and create PR:**
    ```bash
    cd-tools push-pr
    ```
-   - Detects changed files
-   - Updates project versions
+   - Select bump types (patch/minor/major) for each project
+   - Detects changed files automatically
+   - Updates project versions intelligently
    - Commits and pushes changes
    - **Automatically creates GitHub PR** ✨
 
@@ -167,83 +163,90 @@ npm run build
    ```bash
    cd-tools end-pr
    ```
-   - Applies final version (e.g., rc → stable)
-   - **Checks CI status and merges PR** ✨
-   - **Creates GitHub release** ✨
+   - Applies next version if configured (e.g., rc → stable)
+   - **Automatically merges PR with squash** ✨
    - Cleans up tracking files
 
 ## 🛠️ Commands
 
 ### `cd-tools init`
+
 **Initializes the project with GitHub workflows and default configuration.**
 
-- Interactive registry selection (npm, crates.io, container)
+- Interactive registry selection (npm, docker)
 - Generates appropriate `.github/workflows/*.yml` files
 - Creates default `.cdtools/config.json`
+- Sets up `analyze-workspaces.sh` script
 
 ### `cd-tools start-pr`
+
 **Starts a release PR with interactive version tag selection.**
 
-- Pulls latest changes from main
+- Pulls latest changes from current branch
 - Interactive tag selection from configured version tags
-- Creates branch with `rc:` prefix
+- Creates branch with format: `branchName(tag)`
 - Sets up tracking file for release state
 
 ### `cd-tools push-pr`
+
 **Updates versions and creates/updates the pull request.**
 
+- Interactive bump type selection (patch/minor/major) per project
 - Detects changed files using `git diff`
-- Calculates new versions based on tag strategy
+- Calculates new versions based on tag strategy and existing bumps
 - Updates `package.json` or `Cargo.toml` files
 - Commits and pushes version changes
 - **Automatically creates/updates GitHub PR using `gh` CLI**
 - Generates detailed PR description with change summary
 
 ### `cd-tools end-pr`
+
 **Finalizes the release and merges the PR.**
 
 - Handles version tag transitions (e.g., `rc` → `stable`)
-- Updates to final stable versions if configured
-- **Checks CI status and PR mergeability**
-- **Interactive merge method selection** (squash/merge/rebase)
-- **Automatically merges PR using `gh` CLI**
-- **Creates GitHub release for stable versions**
+- Updates to next tag versions if configured
+- Updates base versions for stable releases
+- **Automatically merges PR using `gh` CLI with squash method**
 - Cleans up tracking files
+- Deletes release branch
 
 ## 🔧 GitHub CLI Integration
 
 CD Tools integrates directly with GitHub CLI for seamless automation:
 
 ### PR Management
-- **Automatic PR creation** with detailed descriptions
-- **PR status checking** (CI, mergeability)
-- **Interactive merge options** with safety checks
-- **Automatic PR updates** when pushing new versions
 
-### Release Management
-- **Automatic GitHub release creation** for stable versions
-- **Release note generation** from project changes
-- **Tag creation** with proper versioning
+- **Automatic PR creation** with detailed descriptions
+- **Interactive base branch selection** with safety checks
+- **Automatic PR merging** with squash method
+- **Automatic branch cleanup** after merge
 
 ### Error Handling
+
 - **GitHub CLI availability checks** with helpful error messages
 - **Authentication verification** before operations
-- **Graceful fallbacks** with manual instructions when needed
+- **Graceful error handling** with clear instructions
 
 ### Example GitHub Integration Flow:
+
 ```bash
-cd-tools push-pr
+npx cd-tools push-pr
 # ✅ GitHub PR created: https://github.com/user/repo/pull/123
 
-cd-tools end-pr
-# ✅ CI checks passed
+npx cd-tools end-pr
 # ✅ PR merged with squash method
-# ✅ GitHub release created: https://github.com/user/repo/releases/tag/v1.0.1
+# ✅ Branch deleted
 ```
 
 ## ⚙️ Configuration
 
 The tool uses `.cdtools/config.json` for configuration:
+
+### Versioning Strategies
+
+- **`fixed`**: All projects use the same version (follows updates even without
+  changes)
+- **`independent`**: Only changed projects and their dependents are versioned
 
 ### Version Tags
 
@@ -253,7 +256,7 @@ Define custom version tags with flexible strategies:
 {
   "versionTags": [
     {
-      "dev": {
+      "alpha": {
         "versionSuffixStrategy": "timestamp"
       }
     },
@@ -268,10 +271,12 @@ Define custom version tags with flexible strategies:
 ```
 
 **Version Suffix Strategies:**
+
 - **timestamp**: Generates versions like `1.0.1-rc.20250629135030`
 - **increment**: Generates versions like `1.0.1-rc.0`, `1.0.1-rc.1`, etc.
 
 **Tag Transitions:**
+
 - **next**: Defines version tag progressions (e.g., `rc` → `stable`)
 
 ### Project Configuration
@@ -281,82 +286,65 @@ Define custom version tags with flexible strategies:
   "projects": [
     {
       "path": "./frontend",
-      "type": "typescript", 
+      "type": "typescript",
+      "baseVersion": "1.0.0",
+      "deps": ["./backend", "package.json"],
       "registries": ["npm"]
     },
     {
       "path": "./backend",
       "type": "rust",
+      "baseVersion": "1.1.0",
       "registries": ["crates"]
-    },
-    {
-      "path": "./",
-      "type": "container",
-      "registries": ["container"]
     }
   ]
 }
 ```
 
 **Supported Project Types:**
+
 - `typescript`: Updates `package.json` version field
 - `rust`: Updates `Cargo.toml` version field
-- `container`: For Docker-based projects
 
 **Supported Registries:**
+
 - `npm`: npm registry (for TypeScript/JavaScript)
 - `crates`: crates.io registry (for Rust)
-- `container`: Container registries (Docker)
+- `docker`: Container registries (Docker)
 
-### Release Notes
+**Dependencies (deps):**
 
-```json
-{
-  "releaseNotes": {
-    "enabled": true,
-    "template": "## Changes\n\n{{changes}}\n\n## Contributors\n\n{{contributors}}"
-  }
-}
-```
+- List of file paths (not just package.json) that trigger workspace updates
+- Includes Dockerfiles, configuration files, etc.
 
 ## 🏗️ Architecture
 
 ```
 src/
-├── cli/           # CLI framework and command routing
-│   ├── index.ts   # Main CLI entry point
-│   ├── parser.ts  # Argument parsing
-│   └── router.ts  # Command routing
-├── commands/      # Command implementations
-│   ├── init.ts    # Project initialization
-│   ├── start-pr.ts # Release start
-│   ├── push-pr.ts  # Version updates
-│   └── end-pr.ts   # Release finalization
-├── config/        # Configuration management
-│   ├── schema.ts  # Zod validation schemas
-│   └── parser.ts  # Config file parsing
-├── version/       # Version calculation
-│   ├── calculator.ts # Version logic
-│   └── manager.ts    # Version management
-├── fs/            # File system utilities
-│   └── utils.ts   # File operations
-├── git/           # Git and GitHub operations
-│   ├── operations.ts # Git commands
-│   └── github.ts     # GitHub CLI integration ✨
-├── interactive/   # User interaction
-│   └── prompts.ts # CLI prompts
-└── index.ts       # Main entry point
+├── index.ts           # Main CLI entry point with command routing
+├── commands/          # Command implementations
+│   ├── init.ts        # Project initialization with GitHub workflows
+│   ├── start-pr.ts    # Release branch creation
+│   ├── push-pr.ts     # Version updates and PR creation
+│   └── end-pr.ts      # Release finalization and PR merge
+└── utils/             # Core utilities
+    ├── config.ts      # Configuration and branch info management
+    ├── git.ts         # Git operations with security validation
+    ├── github.ts      # GitHub CLI integration
+    └── version-updater.ts # Version file updates
 ```
 
 ## 🧪 Development
 
 ### Prerequisites
+
 - Node.js 20+
 - TypeScript 5.8+
 - Git
 - **GitHub CLI (gh)** - for testing GitHub integration features
 
 ### Setup
+
 ```bash
 git clone <repository>
 cd cd-tools
@@ -364,9 +352,10 @@ npm install
 ```
 
 ### Available Scripts
+
 ```bash
 npm run build       # Build TypeScript to JavaScript
-npm test           # Run all tests (95 tests)
+npm test           # Run all tests (78 tests)
 npm run test:watch # Run tests in watch mode
 npm run test:coverage # Run with coverage report
 npm run lint       # Check for linting issues (Biome)
@@ -376,15 +365,17 @@ npm run dev        # Build and run CLI
 
 ### Testing Strategy
 
-The project follows **Test-Driven Development (TDD)** with comprehensive test coverage:
+The project follows **Test-Driven Development (TDD)** with comprehensive test
+coverage:
 
 ```bash
-npm test           # ✅ 95 tests passing
+npm test           # ✅ 78 tests passing
 npm run test:coverage  # Detailed coverage report
 ```
 
 **Test Coverage Areas:**
-- Configuration parsing and validation (Zod schemas)
+
+- Configuration parsing and validation
 - Version calculation logic (timestamp/increment strategies)
 - CLI argument parsing and command routing
 - File system operations and git integration
@@ -394,7 +385,7 @@ npm run test:coverage  # Detailed coverage report
 ### Technology Stack
 
 - **TypeScript** with `@tsconfig/strictest` configuration
-- **Zod** for runtime schema validation
+- **Prompts** for interactive CLI
 - **Vitest** for testing framework
 - **Biome** for linting and formatting (unified tool)
 - **Node.js ES modules** with ESM-first architecture
@@ -406,53 +397,60 @@ npm run test:coverage  # Detailed coverage report
 - **Biome Integration**: Unified linting and formatting
 - **TDD Approach**: Test-first development methodology
 - **ES Modules**: Modern JavaScript module system
+- **Security**: Secure subprocess execution with `spawn`
 
 ## 📋 Example Workflows
 
 ### Alpha Release Flow
+
 ```bash
-cd-tools start-pr          # Select "alpha" tag
+cd-tools start-pr          # Select "alpha" tag, create branch
 # Make changes...
 cd-tools push-pr           # Creates 1.0.1-alpha.20250717123456 + GitHub PR
 cd-tools end-pr            # Merge PR and finalize
 ```
 
 ### RC to Stable Flow
+
 ```bash
 cd-tools start-pr          # Select "rc" tag  
 # Make changes...
 cd-tools push-pr           # Creates 1.0.1-rc.0 + GitHub PR
 cd-tools push-pr           # Creates 1.0.1-rc.1 + Updates PR (if more changes)
-cd-tools end-pr            # Creates 1.0.1 stable + Merges PR + GitHub Release
+cd-tools end-pr            # Creates 1.0.1 stable + Merges PR
 ```
 
 ### Multi-Project Release
+
 ```bash
 # Changes to both frontend/ and backend/
 cd-tools push-pr           # Updates both package.json and Cargo.toml + Creates PR
 # GitHub Actions triggered for both npm and crates.io
-cd-tools end-pr            # Merges PR + Creates release
+cd-tools end-pr            # Merges PR
 ```
+
+### Fixed vs Independent Strategy
+
+**Fixed Strategy:**
+
+- All projects get the same version
+- If any project changes, all projects are updated
+
+**Independent Strategy:**
+
+- Only changed projects get new versions
+- Dependencies are automatically detected and updated
 
 ## 🔒 Library Installation Policy
 
 When adding new dependencies:
+
 1. **Consult the gemini CLI** for complexity and reliability assessment
 2. **Update CLAUDE.md** with any installation decisions
 3. **Document rationale** in `docs/ADR.md`
 
-This policy ensures thoughtful dependency management and maintains project simplicity.
-
-## 🤝 Contributing
-
-1. Fork the repository
-2. Create a feature branch
-3. **Write tests first** (TDD approach)
-4. Implement your changes
-5. Ensure all tests pass (`npm test`)
-6. Check linting (`npm run lint`)
-7. **Test GitHub CLI integration** (ensure `gh auth status` works)
-8. Submit a pull request
+This policy ensures thoughtful dependency management and maintains project
+simplicity.
 
 ### Development Guidelines
 
@@ -468,6 +466,7 @@ This policy ensures thoughtful dependency management and maintains project simpl
 ### GitHub CLI Issues
 
 **"gh: command not found"**
+
 ```bash
 # Install GitHub CLI from https://cli.github.com/
 # On macOS: brew install gh
@@ -476,6 +475,7 @@ This policy ensures thoughtful dependency management and maintains project simpl
 ```
 
 **"gh auth status" fails**
+
 ```bash
 # Authenticate with GitHub
 gh auth login
@@ -483,12 +483,14 @@ gh auth login
 ```
 
 **"insufficient permissions" error**
+
 ```bash
 # Re-authenticate with required scopes
-gh auth refresh -s repo,workflow
+gh auth refresh -s repo
 ```
 
 **PR creation fails**
+
 ```bash
 # Check if you're on the correct branch
 git branch --show-current
@@ -500,14 +502,22 @@ git log --oneline -5
 ### Common Issues
 
 **"No tracking file found"**
+
 - Run `cd-tools start-pr` first to initialize a release
 
 **"Version tag configuration not found"**
+
 - Check your `.cdtools/config.json` for correct version tag configuration
 
 **"Cannot find module" errors**
+
 - Run `npm run build` to compile TypeScript
 - Ensure all dependencies are installed with `npm install`
+
+**"Branch info file not found"**
+
+- Run `cd-tools start-pr` to create the tracking file
+- Check that you're on the correct release branch
 
 ## 📄 License
 
@@ -515,24 +525,27 @@ MIT License - see LICENSE file for details.
 
 ## 📚 Related Documentation
 
-- **[Design Document](docs/design.md)** - Detailed requirements and design (Japanese)
-- **[Architecture Decision Records](docs/ADR.md)** - Technical decisions and rationale
+- **[Design Document](docs/design.md)** - Detailed requirements and design
+  (Japanese)
 - **[Development Guide](CLAUDE.md)** - Development setup and guidelines
 
 ## 🚀 Status
 
 **Current Implementation Status:**
-- ✅ Core CLI framework
-- ✅ Configuration management with Zod validation
+
+- ✅ Core CLI framework with command routing
+- ✅ Configuration management with validation
 - ✅ Version calculation (timestamp/increment strategies)
 - ✅ All 4 main commands (init, start-pr, push-pr, end-pr)
 - ✅ File system utilities (package.json, Cargo.toml)
-- ✅ Git operations integration
-- ✅ **GitHub CLI integration** (PR creation, merging, releases)
+- ✅ Git operations with security validation
+- ✅ **GitHub CLI integration** (PR creation, merging)
 - ✅ Interactive prompts system
 - ✅ GitHub workflow generation
-- ✅ 95+ comprehensive tests
+- ✅ **78 comprehensive tests** with full coverage
 - ✅ TypeScript strict compilation
 - ✅ Biome linting/formatting
+- ✅ **Branch info tag updates** for next version transitions
 
-The tool is **production-ready** for monorepo CD workflows with full GitHub integration via GitHub CLI.
+The tool is **production-ready** for monorepo CD workflows with full GitHub
+integration via GitHub CLI.
