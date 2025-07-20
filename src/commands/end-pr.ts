@@ -20,7 +20,10 @@ import {
 	getCurrentPrUrl,
 	mergePullRequest,
 } from "../utils/github.js";
-import { updateMultipleProjectVersions } from "../utils/version-updater.js";
+import {
+	getPackageName,
+	updateMultipleProjectVersions,
+} from "../utils/version-updater.js";
 
 /**
  * Finalize and merge PR
@@ -123,11 +126,20 @@ export async function endPrCommand(): Promise<void> {
 				console.log(`  • ${projectPath}: ${version}`);
 			}
 
-			// Commit config changes
-			const versionEntries = Object.entries(branchInfo.workspaceUpdated)
-				.map(([path, version]) => `${path}(${version})`)
-				.join(", ");
-			const commitMessage = `update baseVersion for stable release: ${versionEntries}`;
+			// Commit config changes using package names
+			const versionEntries = [];
+			for (const [path, version] of Object.entries(
+				branchInfo.workspaceUpdated,
+			)) {
+				try {
+					const packageName = await getPackageName(path);
+					versionEntries.push(`${packageName}(${version})`);
+				} catch {
+					// Fallback to path if package name is not available
+					versionEntries.push(`${path}(${version})`);
+				}
+			}
+			const commitMessage = `update baseVersion for stable release: ${versionEntries.join(", ")}`;
 
 			console.log(`\n📝 Committing baseVersion updates: ${commitMessage}`);
 			await commitChanges(commitMessage);
@@ -173,11 +185,18 @@ export async function endPrCommand(): Promise<void> {
 
 			await updateMultipleProjectVersions(projectsToUpdate, newVersions);
 
-			// Generate commit message
-			const versionEntries = Object.entries(newVersions)
-				.map(([path, version]) => `${path}(${version})`)
-				.join(", ");
-			const commitMessage = `prepare next release: ${versionEntries}`;
+			// Generate commit message using package names
+			const versionEntries = [];
+			for (const [path, version] of Object.entries(newVersions)) {
+				try {
+					const packageName = await getPackageName(path);
+					versionEntries.push(`${packageName}(${version})`);
+				} catch {
+					// Fallback to path if package name is not available
+					versionEntries.push(`${path}(${version})`);
+				}
+			}
+			const commitMessage = `prepare next release: ${versionEntries.join(", ")}`;
 
 			console.log(`\n📝 Committing next version changes: ${commitMessage}`);
 			await commitChanges(commitMessage);

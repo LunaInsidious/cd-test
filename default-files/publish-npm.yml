@@ -75,9 +75,9 @@ jobs:
           NPM_AUTH_TOKEN: ${{secrets.NPM_TOKEN}}
       - name: Add Tag
         run: |
-          TAG_NAME="${WORKSPACE_PATH//\//-}-v${VERSION}"
+          TAG_NAME="${PACKAGE_NAME}-v${VERSION}"
           git tag "$TAG_NAME"
           git push --tags origin "$TAG_NAME"
         env:
-          WORKSPACE_PATH: ${{ inputs.workspace_path }}
+          PACKAGE_NAME: ${{ steps.get-name.outputs.name }}
           VERSION: ${{ inputs.workspace_version }}

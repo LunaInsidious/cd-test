@@ -24,7 +24,10 @@ import {
 	checkPrExists,
 	createPullRequestInteractive,
 } from "../utils/github.js";
-import { updateMultipleProjectVersions } from "../utils/version-updater.js";
+import {
+	getPackageName,
+	updateMultipleProjectVersions,
+} from "../utils/version-updater.js";
 
 /**
  * Update versions and create/update PR
@@ -159,11 +162,18 @@ export async function pushPrCommand(): Promise<void> {
 			await updateBranchInfo(currentBranch, filteredVersions);
 		}
 
-		// Generate commit message
-		const versionEntries = Object.entries(filteredVersions)
-			.map(([path, version]) => `${path}(${version})`)
-			.join(", ");
-		const commitMessage = `commit for ${versionEntries}`;
+		// Generate commit message using package names
+		const versionEntries = [];
+		for (const [path, version] of Object.entries(filteredVersions)) {
+			try {
+				const packageName = await getPackageName(path);
+				versionEntries.push(`${packageName}(${version})`);
+			} catch {
+				// Fallback to path if package name is not available
+				versionEntries.push(`${path}(${version})`);
+			}
+		}
+		const commitMessage = `commit for ${versionEntries.join(", ")}`;
 
 		console.log(`\n📝 Committing changes: ${commitMessage}`);
 		await commitChanges(commitMessage);
@@ -175,10 +185,20 @@ export async function pushPrCommand(): Promise<void> {
 		const prExists = await checkPrExists();
 		if (!prExists) {
 			console.log("\n🔄 Creating pull request...");
-			const prTitle = `Release: ${versionEntries}`;
-			const prBody = `Release PR for:\n\n${Object.entries(filteredVersions)
-				.map(([path, version]) => `- ${path}: ${version}`)
-				.join("\n")}`;
+			const prTitle = `Release: ${versionEntries.join(", ")}`;
+
+			// Generate PR body using package names
+			const prBodyEntries = [];
+			for (const [path, version] of Object.entries(filteredVersions)) {
+				try {
+					const packageName = await getPackageName(path);
+					prBodyEntries.push(`- ${packageName}: ${version}`);
+				} catch {
+					// Fallback to path if package name is not available
+					prBodyEntries.push(`- ${path}: ${version}`);
+				}
+			}
+			const prBody = `Release PR for:\n\n${prBodyEntries.join("\n")}`;
 
 			const prUrl = await createPullRequestInteractive(
 				prTitle,

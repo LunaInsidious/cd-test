@@ -77,6 +77,28 @@ export async function updateProjectVersion(
 }
 
 /**
+ * Get package name from package.json file
+ */
+export async function getPackageName(projectPath: string): Promise<string> {
+	const packageJsonPath = `${projectPath}/package.json`;
+
+	try {
+		const content = await readFile(packageJsonPath, "utf-8");
+		const packageJson = JSON.parse(content);
+
+		if (!packageJson.name) {
+			throw new Error(`Package name not found in ${packageJsonPath}`);
+		}
+
+		return packageJson.name;
+	} catch (error) {
+		throw new Error(
+			`Failed to read package name from ${packageJsonPath}: ${error instanceof Error ? error.message : String(error)}`,
+		);
+	}
+}
+
+/**
  * Update multiple project versions
  */
 export async function updateMultipleProjectVersions(

@@ -32,6 +32,7 @@ jobs:
       - name: Get package name
         id: get-name
         working-directory: ${{ inputs.workspace_path }}
+        # TODO: ts以外の言語に対応、monorepoでワークスペースパスのpackage.jsonを参照
         run: node -e "console.log('name=' + require('./package.json').name)" >> "$GITHUB_OUTPUT"
       - name: Verify version matches expected
         working-directory: ${{ inputs.workspace_path }}
@@ -45,6 +46,7 @@ jobs:
       - name: Log in to Docker Hub
         uses: docker/login-action@v2
         with:
+          # TODO: docker hubをデフォルトにする
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
@@ -71,11 +73,11 @@ jobs:
         if: >-
           ${{steps.tag-exists.outputs.tag_exists == 0 }}
         run: |
-          TAG_NAME="${WORKSPACE_PATH//\//-}-v${VERSION}"
+          TAG_NAME="${PACKAGE_NAME}-v${VERSION}"
           git tag "$TAG_NAME"
           git push --tags origin "$TAG_NAME"
         env:
-          WORKSPACE_PATH: ${{ inputs.workspace_path }}
+          PACKAGE_NAME: ${{ steps.get-name.outputs.name }}
           VERSION: ${{ inputs.workspace_version }}
       - name: Extract metadata (tags, labels) for Docker
         if: >-
