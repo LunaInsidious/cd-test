@@ -102,6 +102,7 @@ export async function pushPrCommand(): Promise<void> {
 	);
 
 	console.log("\n📂 Projects to update:");
+	console.log(projectsToUpdate.length, projectsToUpdate);
 	for (const projectPath of projectsToUpdate) {
 		const newVersion = newVersions[projectPath];
 		if (newVersion) {
@@ -378,8 +379,9 @@ function determineProjectsToUpdate(
 		const hasChangedDeps = project.deps.some((depPath) => {
 			// Deps are relative to the root directory
 			const fullDepPath = path.resolve(depPath);
-			return changedFullPaths.some((changedPath) =>
-				changedPath.startsWith(fullDepPath) || changedPath === fullDepPath,
+			return changedFullPaths.some(
+				(changedPath) =>
+					changedPath.startsWith(fullDepPath) || changedPath === fullDepPath,
 			);
 		});
 
@@ -643,7 +645,10 @@ if (import.meta.vitest) {
 				projects: [
 					{
 						path: "./packages/package-a",
-						deps: ["./packages/package-a/package.json", "./packages/package-a/src"],
+						deps: [
+							"./packages/package-a/package.json",
+							"./packages/package-a/src",
+						],
 						type: "npm",
 						baseVersion: "1.0.0",
 						bumpedVersions: [],
@@ -660,7 +665,10 @@ if (import.meta.vitest) {
 				],
 			};
 			// Mix of relative and different formats
-			const changedFiles = ["./packages/package-a/src/index.ts", "packages/package-a/package.json"];
+			const changedFiles = [
+				"./packages/package-a/src/index.ts",
+				"packages/package-a/package.json",
+			];
 			const newVersions = { "./packages/package-a": "1.0.1" };
 
 			const result = determineProjectsToUpdate(
@@ -680,7 +688,11 @@ if (import.meta.vitest) {
 				projects: [
 					{
 						path: "apps/frontend",
-						deps: ["apps/frontend/package.json", "shared/config.json", "apps/frontend/Dockerfile"],
+						deps: [
+							"apps/frontend/package.json",
+							"shared/config.json",
+							"apps/frontend/Dockerfile",
+						],
 						type: "npm",
 						baseVersion: "1.0.0",
 						bumpedVersions: [],
