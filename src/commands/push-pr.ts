@@ -118,7 +118,8 @@ export async function pushPrCommand(): Promise<void> {
 	for (const projectPath of projectsToUpdate) {
 		const newVersion = newVersions[projectPath];
 		if (newVersion) {
-			console.log(`  • ${projectPath}: ${newVersion}`);
+			const packageName = await getPackageName(projectPath);
+			console.log(`  • ${packageName}: ${newVersion}`);
 		}
 	}
 
