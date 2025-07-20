@@ -201,11 +201,18 @@ export async function getCurrentPrUrl(): Promise<string | null> {
  */
 export async function mergePullRequest(prUrl: string): Promise<void> {
 	try {
-		await execGh(["pr", "merge", "--squash", prUrl]);
+		await execGh([
+			"pr",
+			"merge",
+			"--auto",
+			"--delete-branch",
+			"--squash",
+			prUrl,
+		]);
 	} catch (error) {
 		throw new GitHubError(
 			`Failed to merge pull request: ${error instanceof Error ? error.message : String(error)}`,
-			`gh pr merge --auto --squash ${prUrl}`,
+			`gh pr merge --auto --delete-branch --squash ${prUrl}`,
 		);
 	}
 }
