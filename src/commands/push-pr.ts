@@ -592,9 +592,7 @@ async function getNextIncrement(
 	try {
 		// Look for tags like "1.0.0-alpha.0", "1.0.0-alpha.1", "lib-1.0.0-alpha.0", etc.
 		const tagPattern = `*${baseVersion}-${tag}.*`;
-		console.log(`🔍 Checking existing tags for pattern: ${tagPattern}`);
 		const existingTags = await getTagsMatchingPattern(tagPattern);
-		console.log(`📋 Found ${existingTags.length} matching tags:`, existingTags);
 
 		// Create regex pattern to match version tags with increment numbers
 		// Supports both formats: "1.0.0-alpha.0" and "library-name-1.0.0-alpha.0"
@@ -608,6 +606,9 @@ async function getNextIncrement(
 		const increments = existingTags
 			.map((tagName) => {
 				const match = tagName.match(incrementRegex);
+				console.log(
+					`Checking tag: ${tagName} against regex: ${incrementRegex}, match: ${match}`,
+				);
 				return match?.[1] ? parseInt(match[1], 10) : -1;
 			})
 			.filter((num) => num >= 0);
