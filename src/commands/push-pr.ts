@@ -157,13 +157,8 @@ export async function pushPrCommand(): Promise<void> {
 
 			// Save updated config
 			await updateConfig(updatedConfig);
-
-			// Clear workspaceUpdated from branch info for stable releases
-			await updateBranchInfo(currentBranch, {});
-		} else {
-			// For non-stable releases: update branch info with workspace updates
-			await updateBranchInfo(currentBranch, filteredVersions);
 		}
+		await updateBranchInfo(currentBranch, filteredVersions);
 
 		// Generate commit message using package names
 		const versionEntries = [];

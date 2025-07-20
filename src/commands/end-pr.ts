@@ -7,6 +7,7 @@ import {
 	isStableTag,
 	loadBranchInfo,
 	loadConfig,
+	updateBranchInfo,
 	updateConfig,
 } from "../utils/config.js";
 import {
@@ -160,6 +161,7 @@ export async function endPrCommand(): Promise<void> {
 					);
 				}
 			}
+			await updateBranchInfo(currentBranch, newVersions);
 
 			await updateMultipleProjectVersions(projectsToUpdate, newVersions);
 
