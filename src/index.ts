@@ -7,6 +7,7 @@
  * Supports init, start-pr, push-pr, and end-pr commands.
  */
 
+import { endPrCommand } from "./commands/end-pr.js";
 import { initCommand } from "./commands/init.js";
 import { pushPrCommand } from "./commands/push-pr.js";
 import { startPrCommand } from "./commands/start-pr.js";
@@ -30,7 +31,7 @@ async function main(): Promise<void> {
 				break;
 
 			case "end-pr":
-				console.log("end-pr command not yet implemented");
+				await endPrCommand();
 				break;
 
 			case undefined:

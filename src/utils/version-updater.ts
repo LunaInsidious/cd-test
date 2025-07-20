@@ -85,9 +85,13 @@ export async function updateMultipleProjectVersions(
 ): Promise<void> {
 	const updatePromises = projects
 		.filter((project) => project.path in versionUpdates)
-		.map((project) =>
-			updateProjectVersion(project, versionUpdates[project.path]!),
-		);
+		.map((project) => {
+			const version = versionUpdates[project.path];
+			if (!version) {
+				throw new Error(`Version not found for project: ${project.path}`);
+			}
+			return updateProjectVersion(project, version);
+		});
 
 	await Promise.all(updatePromises);
 }

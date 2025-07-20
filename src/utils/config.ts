@@ -1,4 +1,5 @@
-import { access, readFile, writeFile } from "node:fs/promises";
+import { access, readdir, readFile, unlink, writeFile } from "node:fs/promises";
+import path from "node:path";
 
 /**
  * Configuration and branch tracking file utilities
@@ -190,4 +191,38 @@ export function getAvailableVersionTags(
 	}
 
 	return tags;
+}
+
+/**
+ * Delete branch info file for current branch
+ * @param currentBranch - The current branch name
+ */
+export async function deleteBranchInfo(currentBranch: string): Promise<void> {
+	try {
+		// Find existing branch info file
+		const files = await readdir(".cdtools");
+		const branchInfoFile = files.find((file: string) => {
+			const withoutExtension = file.replace(/\.json$/, "");
+			const parts = withoutExtension.split("-");
+			if (parts.length < 2) return false;
+
+			// Extract branch name from filename (everything after first dash)
+			const filenameBranch = parts.slice(1).join("-");
+			const normalizedCurrentBranch = currentBranch.replace(
+				/[^a-zA-Z0-9]/g,
+				"-",
+			);
+
+			return filenameBranch === normalizedCurrentBranch;
+		});
+
+		if (branchInfoFile) {
+			const branchInfoPath = path.join(".cdtools", branchInfoFile);
+			await unlink(branchInfoPath);
+		}
+	} catch (error) {
+		throw new Error(
+			`Failed to delete branch info: ${error instanceof Error ? error.message : String(error)}`,
+		);
+	}
 }

@@ -13,6 +13,7 @@ import {
 	commitChanges,
 	getChangedFiles,
 	getCurrentBranch,
+	getTagsMatchingPattern,
 	pushChanges,
 } from "../utils/git.js";
 import {
@@ -82,21 +83,22 @@ export async function pushPrCommand(): Promise<void> {
 		process.exit(0);
 	}
 
+	// Detect file changes since parent branch
+	console.log("\n🔍 Detecting file changes...");
+	const changedFiles = await getChangedFiles(branchInfo.parentBranch);
+
 	// Calculate new versions based on selections and current state
 	const newVersions = await calculateNewVersions(
 		config,
 		branchInfo,
 		bumpSelections,
+		changedFiles,
 	);
 
 	console.log("\n📋 Version updates:");
 	for (const [projectPath, version] of Object.entries(newVersions)) {
 		console.log(`  • ${projectPath}: ${version}`);
 	}
-
-	// Detect file changes since parent branch
-	console.log("\n🔍 Detecting file changes...");
-	const changedFiles = await getChangedFiles(branchInfo.parentBranch);
 
 	// Determine which projects need updates based on file changes
 	const projectsToUpdate = determineProjectsToUpdate(
@@ -234,6 +236,7 @@ async function calculateNewVersions(
 	config: Config,
 	branchInfo: BranchInfo,
 	bumpSelections: Record<string, BumpType>,
+	changedFiles: string[],
 ): Promise<Record<string, string>> {
 	const result: Record<string, string> = {};
 
@@ -247,7 +250,22 @@ async function calculateNewVersions(
 
 	for (const project of config.projects) {
 		const projectPath = project.path;
-		const selectedBump = bumpSelections[projectPath];
+		let selectedBump = bumpSelections[projectPath];
+
+		// For independent strategy: if project has dependency changes but no direct changes,
+		// and user didn't select a bump type, automatically apply patch update
+		if (config.versioningStrategy === "independent" && !selectedBump) {
+			const hasDependencyChanges = isDependencyOnlyProject(
+				project,
+				changedFiles,
+			);
+			if (hasDependencyChanges) {
+				selectedBump = "patch";
+				console.log(
+					`  → ${projectPath}: Auto-applying patch update (dependency-only changes)`,
+				);
+			}
+		}
 
 		if (!selectedBump) {
 			continue; // Project was skipped
@@ -262,7 +280,7 @@ async function calculateNewVersions(
 		let newVersion: string;
 		if (hasBeenReleased) {
 			// No base version change needed, just update suffix
-			newVersion = generateVersionWithSuffix(
+			newVersion = await generateVersionWithSuffix(
 				project.baseVersion,
 				branchInfo.tag,
 				currentVersionTag.versionSuffixStrategy,
@@ -270,7 +288,7 @@ async function calculateNewVersions(
 		} else {
 			// Calculate new base version and add to bumpedVersions
 			const newBaseVersion = bumpVersion(project.baseVersion, selectedBump);
-			newVersion = generateVersionWithSuffix(
+			newVersion = await generateVersionWithSuffix(
 				newBaseVersion,
 				branchInfo.tag,
 				currentVersionTag.versionSuffixStrategy,
@@ -358,6 +376,43 @@ function bumpVersion(baseVersion: string, bumpType: BumpType): string {
 }
 
 /**
+ * Check if a project has only dependency changes (no direct project changes)
+ * @param project - The project configuration
+ * @param changedFiles - Array of changed file paths
+ * @returns true if project has dependency changes but no direct changes
+ */
+function isDependencyOnlyProject(
+	project: Config["projects"][0],
+	changedFiles: string[],
+): boolean {
+	const changedFullPaths = changedFiles.map((filepath) =>
+		path.resolve(filepath),
+	);
+	const projectPath = path.resolve(project.path);
+
+	// Check if project directory itself has changes
+	const hasDirectChanges = changedFullPaths.some((changedPath) =>
+		changedPath.startsWith(`${projectPath}/`),
+	);
+
+	// If project has direct changes, it's not dependency-only
+	if (hasDirectChanges) {
+		return false;
+	}
+
+	// Check if project dependencies have changes
+	const hasDependencyChanges = project.deps.some((depPath) => {
+		const fullDepPath = path.resolve(depPath);
+		return changedFullPaths.some(
+			(changedPath) =>
+				changedPath.startsWith(fullDepPath) || changedPath === fullDepPath,
+		);
+	});
+
+	return hasDependencyChanges;
+}
+
+/**
  * Determine which projects need version updates based on file changes
  * Projects get updated if:
  * 1. They have files in their deps array that were changed
@@ -412,13 +467,26 @@ function determineProjectsToUpdate(
 }
 
 /**
- * Generate version string with appropriate suffix
+ * Escape special regex characters in a string
+ * @param str - String to escape
+ * @returns Escaped string safe for use in regex
  */
-function generateVersionWithSuffix(
+function escapeRegexMetaCharacters(str: string): string {
+	return str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+/**
+ * Generate version string with appropriate suffix
+ * @param baseVersion - The base version (e.g., "1.0.0")
+ * @param tag - The version tag (e.g., "alpha", "rc")
+ * @param strategy - The suffix strategy ("timestamp" or "increment")
+ * @returns Promise resolving to the versioned string
+ */
+async function generateVersionWithSuffix(
 	baseVersion: string,
 	tag: string,
 	strategy: "timestamp" | "increment",
-): string {
+): Promise<string> {
 	if (strategy === "timestamp") {
 		const now = new Date();
 		const timestamp = now
@@ -428,9 +496,51 @@ function generateVersionWithSuffix(
 			.slice(0, 14); // YYYYMMDDhhmmss
 		return `${baseVersion}-${tag}.${timestamp}`;
 	} else {
-		// increment strategy - would need to check existing tags
-		// For now, start with .0 (this should be enhanced to check git tags)
-		return `${baseVersion}-${tag}.0`;
+		// increment strategy - check existing tags to find the next increment
+		const nextIncrement = await getNextIncrement(baseVersion, tag);
+		return `${baseVersion}-${tag}.${nextIncrement}`;
+	}
+}
+
+/**
+ * Get the next increment number for a given base version and tag
+ * Checks existing git tags to find the highest increment and returns next
+ * @param baseVersion - The base version to check (e.g., "1.0.0")
+ * @param tag - The tag name to check (e.g., "alpha", "rc")
+ * @returns Promise resolving to the next increment number
+ */
+async function getNextIncrement(
+	baseVersion: string,
+	tag: string,
+): Promise<number> {
+	try {
+		// Look for tags like "1.0.0-alpha.0", "1.0.0-alpha.1", etc.
+		const tagPattern = `${baseVersion}-${tag}.*`;
+		const existingTags = await getTagsMatchingPattern(tagPattern);
+
+		// Create regex pattern to match version tags with increment numbers
+		const escapedBaseVersion = escapeRegexMetaCharacters(baseVersion);
+		const escapedTag = escapeRegexMetaCharacters(tag);
+		const incrementRegex = new RegExp(
+			`^${escapedBaseVersion}-${escapedTag}\\.(\\d+)$`,
+		);
+
+		// Extract increment numbers from matching tags
+		const increments = existingTags
+			.map((tagName) => {
+				const match = tagName.match(incrementRegex);
+				return match?.[1] ? parseInt(match[1], 10) : -1;
+			})
+			.filter((num) => num >= 0);
+
+		// Return next increment (highest + 1, or 0 if none exist)
+		return increments.length > 0 ? Math.max(...increments) + 1 : 0;
+	} catch (error) {
+		// If git tag lookup fails, default to 0
+		console.warn(
+			`Warning: Could not check existing tags for ${baseVersion}-${tag}: ${error instanceof Error ? error.message : String(error)}`,
+		);
+		return 0;
 	}
 }
 
@@ -474,13 +584,21 @@ if (import.meta.vitest) {
 	});
 
 	describe("generateVersionWithSuffix", () => {
-		it("should generate timestamp versions", () => {
-			const result = generateVersionWithSuffix("1.0.0", "alpha", "timestamp");
+		it("should generate timestamp versions", async () => {
+			const result = await generateVersionWithSuffix(
+				"1.0.0",
+				"alpha",
+				"timestamp",
+			);
 			expect(result).toMatch(/^1\.0\.0-alpha\.\d{14}$/);
 		});
 
-		it("should generate increment versions", () => {
-			const result = generateVersionWithSuffix("1.0.0", "rc", "increment");
+		it("should generate increment versions", async () => {
+			const result = await generateVersionWithSuffix(
+				"1.0.0",
+				"rc",
+				"increment",
+			);
 			expect(result).toBe("1.0.0-rc.0");
 		});
 	});
@@ -751,6 +869,68 @@ if (import.meta.vitest) {
 
 			expect(result).toContain("packages/lib");
 			expect(result).not.toContain("packages/lib-utils");
+		});
+	});
+
+	describe("isDependencyOnlyProject", () => {
+		it("should return true for dependency-only changes", () => {
+			const project = {
+				path: "package-a",
+				deps: ["shared/config.json", "package-a/package.json"],
+				type: "npm" as const,
+				baseVersion: "1.0.0",
+				bumpedVersions: [],
+				registries: [],
+			};
+			const changedFiles = ["shared/config.json"];
+
+			const result = isDependencyOnlyProject(project, changedFiles);
+			expect(result).toBe(true);
+		});
+
+		it("should return false for direct project changes", () => {
+			const project = {
+				path: "package-a",
+				deps: ["shared/config.json", "package-a/package.json"],
+				type: "npm" as const,
+				baseVersion: "1.0.0",
+				bumpedVersions: [],
+				registries: [],
+			};
+			const changedFiles = ["package-a/src/index.ts", "shared/config.json"];
+
+			const result = isDependencyOnlyProject(project, changedFiles);
+			expect(result).toBe(false);
+		});
+
+		it("should return false for no changes at all", () => {
+			const project = {
+				path: "package-a",
+				deps: ["shared/config.json", "package-a/package.json"],
+				type: "npm" as const,
+				baseVersion: "1.0.0",
+				bumpedVersions: [],
+				registries: [],
+			};
+			const changedFiles = ["other-package/src/index.ts"];
+
+			const result = isDependencyOnlyProject(project, changedFiles);
+			expect(result).toBe(false);
+		});
+
+		it("should handle relative paths correctly", () => {
+			const project = {
+				path: "./packages/lib",
+				deps: ["./shared/config.json", "./packages/lib/package.json"],
+				type: "npm" as const,
+				baseVersion: "1.0.0",
+				bumpedVersions: [],
+				registries: [],
+			};
+			const changedFiles = ["shared/config.json"];
+
+			const result = isDependencyOnlyProject(project, changedFiles);
+			expect(result).toBe(true);
 		});
 	});
 }

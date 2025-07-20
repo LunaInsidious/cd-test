@@ -206,3 +206,21 @@ export async function getAvailableBranches(): Promise<string[]> {
 		);
 	}
 }
+
+/**
+ * Get all tags matching a pattern
+ * @param pattern - The pattern to match tags against (e.g., "v1.0.0-alpha.*")
+ */
+export async function getTagsMatchingPattern(
+	pattern: string,
+): Promise<string[]> {
+	try {
+		const output = await execGit(["tag", "-l", pattern]);
+		return output ? output.split("\n").filter(Boolean) : [];
+	} catch (error) {
+		throw new GitError(
+			`Failed to get tags matching pattern '${pattern}': ${error instanceof Error ? error.message : String(error)}`,
+			`git tag -l ${pattern}`,
+		);
+	}
+}

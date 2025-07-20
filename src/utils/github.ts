@@ -1,6 +1,6 @@
 import { spawn } from "node:child_process";
 import prompts from "prompts";
-import { getAvailableBranches } from "./git.js";
+import { getAvailableBranches, getCurrentBranch } from "./git.js";
 
 /**
  * GitHub CLI utility functions
@@ -111,11 +111,13 @@ export async function createPullRequestInteractive(
 	defaultBaseBranch: string,
 ): Promise<string> {
 	try {
-		// Get available branches
-		const availableBranches = await getAvailableBranches();
+		// Get available branches and current branch
+		const [availableBranches, currentBranch] = await Promise.all([
+			getAvailableBranches(),
+			getCurrentBranch(),
+		]);
 
 		// Filter out current branch and add "Create new branch" option
-		const currentBranch = process.env["GITHUB_HEAD_REF"] || "HEAD";
 		const branchChoices = availableBranches
 			.filter((branch) => branch !== currentBranch)
 			.map((branch) => ({ title: branch, value: branch }));
@@ -182,5 +184,20 @@ export async function getCurrentPrUrl(): Promise<string | null> {
 		return status.currentBranch?.url || null;
 	} catch (_error) {
 		return null;
+	}
+}
+
+/**
+ * Merge a pull request with squash
+ * @param prUrl - The pull request URL to merge
+ */
+export async function mergePullRequest(prUrl: string): Promise<void> {
+	try {
+		await execGh(["pr", "merge", "--squash", prUrl]);
+	} catch (error) {
+		throw new GitHubError(
+			`Failed to merge pull request: ${error instanceof Error ? error.message : String(error)}`,
+			`gh pr merge --auto --squash ${prUrl}`,
+		);
 	}
 }

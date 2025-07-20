@@ -29,24 +29,24 @@ TODOリスト
       - [x] リリースされていればベースのバージョン(○.△.×-(タグ名).xの○.△.×の部分)に変更はなし
       - [x] リリースされていなければ、ユーザーが選択した変更分のバージョンを上げる(rcリリース用のブランチで、現在のバージョンが1.0.1-rc.0で、`bumpedVersions`が`["patch"]`で、今回のリリースでユーザーが`minor`を選択した場合、バージョンは1.1.0-rc.1に上げる)
     - `/.cdtools/config.json`の`versioningStrategy`がfixedの場合
-      - [ ] すべてのワークスペースについて、ブランチ情報ファイルのリリースモードに基づいて、そのリリースモードの`versionSuffixStrategy`を確認し、suffixを`timestamp`なら現在時刻の`YYYYMMDDhhmmss`を、`increment`なら、もしsuffixがなければ`[tag名].0`,suffixがあれば`[tag名].(前のsuffix+1)`とする。
+      - [x] すべてのワークスペースについて、ブランチ情報ファイルのリリースモードに基づいて、そのリリースモードの`versionSuffixStrategy`を確認し、suffixを`timestamp`なら現在時刻の`YYYYMMDDhhmmss`を、`increment`なら、もしsuffixがなければ`[tag名].0`,suffixがあれば`[tag名].(前のsuffix+1)`とする。
     - `/.cdtools/config.json`の`versioningStrategy`がindependentの場合
-      - [ ] 前回のリリースから差分があるワークスペースと、差分(package.jsonなども含む。`/.cdtools/config.json`の各ワークスペースの`deps`を参照)を依存関係に持つワークスペースについて、各バージョン管理フィールドを更新する。
-        - [ ] 依存先に差分があるだけなら、それは必ずpatchアップデート
-      - [ ] 前回のリリースからの差分検知は、まず`git diff HEAD..@{u} --name-only`を実行して、それで`no upstream configured for branch`のエラーが出たら(ブランチを作成してからpushをしていないということなので)`git diff $(git merge-base parentBranch HEAD) HEAD --name-only`(parentBranchはブランチ情報ファイルから取得できる)を実行する。
-        - [ ] 差分として見つかったファイル名から、`/.cdtools/config.json`の各ワークスペースの`deps`を参考に、updateするべきワークスペースを判別する
-    - [ ] ブランチ情報ファイルと、各言語ごとのバージョン管理フィールド(tsなら各package.jsonのversionフィールド)にこれからリリースする予定のワークスペースを記載する(ブランチ情報ファイルの例:`{workspaceUpdated:[{"package-a":"1.0.1-rc.0","package-b":"2.0.1-alpha.2"}]}`のフィールドを追加する)
-    - [ ] これまで発生した差分をcommit,pushする(commit messageは`commit for [リリースするワークスペース名1](リリースバージョン1), [リリースするワークスペース名2](リリースバージョン2), …`みたいなのを想定)
-    - [ ] PRを作成していなければ`gh pr create`コマンドでbase branchをインタラクティブに選択(新しいブランチを作成する選択肢も用意)して作成する。(`gh`コマンドはこのライブラリを使う要件として記載するので、execコマンドなどで直接実行してよい)
+      - [x] 前回のリリースから差分があるワークスペースと、差分(package.jsonなども含む。`/.cdtools/config.json`の各ワークスペースの`deps`を参照)を依存関係に持つワークスペースについて、各バージョン管理フィールドを更新する。
+        - [x] 依存先に差分があるだけなら、それは必ずpatchアップデート
+      - [x] 前回のリリースからの差分検知は、まず`git diff HEAD..@{u} --name-only`を実行して、それで`no upstream configured for branch`のエラーが出たら(ブランチを作成してからpushをしていないということなので)`git diff $(git merge-base parentBranch HEAD) HEAD --name-only`(parentBranchはブランチ情報ファイルから取得できる)を実行する。
+        - [x] 差分として見つかったファイル名から、`/.cdtools/config.json`の各ワークスペースの`deps`を参考に、updateするべきワークスペースを判別する
+    - [x] ブランチ情報ファイルと、各言語ごとのバージョン管理フィールド(tsなら各package.jsonのversionフィールド)にこれからリリースする予定のワークスペースを記載する(ブランチ情報ファイルの例:`{workspaceUpdated:[{"package-a":"1.0.1-rc.0","package-b":"2.0.1-alpha.2"}]}`のフィールドを追加する)
+    - [x] これまで発生した差分をcommit,pushする(commit messageは`commit for [リリースするワークスペース名1](リリースバージョン1), [リリースするワークスペース名2](リリースバージョン2), …`みたいなのを想定)
+  - [x] PRを作成していなければ`gh pr create`コマンドでbase branchをインタラクティブに選択(新しいブランチを作成する選択肢も用意)して作成する。(`gh`コマンドはこのライブラリを使う要件として記載するので、execコマンドなどで直接実行してよい)
 - フェーズ4
   - cd-tools-end-prコマンドで、
-    - [ ] cd-tools-initがされていなかったら(`/cd-tools/config.json`がなければ)エラーで終了
-    - [ ] cd-tools-start-prがされていなかったら(ブランチ情報ファイルがなければ)エラーで終了
-    - [ ] PRが作成されていなかったらエラーで終了(`$(gh pr status --jq .currentBranch.url --json url)を実行し、空かを確認`)
-    - [ ] `/.cdtools/config.json`の、現在のPRがリリースしているバージョンタグの`next`の設定に従ってブランチ情報ファイルの`workspaceUpdated`や各言語ごとのバージョン管理フィールドを更新する(`next`のtagの`versionSuffixStrategy`が`increment`だった場合は、`git tag --list`で前回のタグを確認してincrementする)
-    - [ ] push-prの時と同様の流れでバージョンアップの変更をcommit,pushし、リリース用のCDが流れるようにする
-    - [ ] ブランチ情報ファイルを削除し、そのcommitをpushする(最後の後片付け)
-    - [ ] `gh pr merge --squash "$pr_url$`を実行し、マージ
+    - [x] cd-tools-initがされていなかったら(`/cd-tools/config.json`がなければ)エラーで終了
+    - [x] cd-tools-start-prがされていなかったら(ブランチ情報ファイルがなければ)エラーで終了
+    - [x] PRが作成されていなかったらエラーで終了(`$(gh pr status --jq .currentBranch.url --json url)を実行し、空かを確認`)
+    - [x] `/.cdtools/config.json`の、現在のPRがリリースしているバージョンタグの`next`の設定に従ってブランチ情報ファイルの`workspaceUpdated`や各言語ごとのバージョン管理フィールドを更新する(`next`のtagの`versionSuffixStrategy`が`increment`だった場合は、`git tag --list`で前回のタグを確認してincrementする)
+    - [x] push-prの時と同様の流れでバージョンアップの変更をcommit,pushし、リリース用のCDが流れるようにする
+    - [x] ブランチ情報ファイルを削除し、そのcommitをpushする(最後の後片付け)
+    - [x] `gh pr merge --squash "$pr_url$`を実行し、マージ
 - フェーズ5
   - [ ] stableリリースの場合、`bumpedVersions`をクリアする(理由は`/docs/answer.md`を参照branchInfo.workspaceUpdated = workspaceUpdated;)
   - [ ] `/default-files/publish-npm.yml`,`/default-files/publish-container-image.yml`について、TODOとして記載しているように、ブランチ情報ファイルの`workspaceUpdated`に基づいて並列で各ワークスペースのリリースができるようにする。
