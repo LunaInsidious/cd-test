@@ -215,12 +215,55 @@ export async function getTagsMatchingPattern(
 	pattern: string,
 ): Promise<string[]> {
 	try {
+		// fetch remote tags first
+		await execGit(["fetch", "--tags"]);
 		const output = await execGit(["tag", "-l", pattern]);
 		return output ? output.split("\n").filter(Boolean) : [];
 	} catch (error) {
 		throw new GitError(
 			`Failed to get tags matching pattern '${pattern}': ${error instanceof Error ? error.message : String(error)}`,
 			`git tag -l ${pattern}`,
+		);
+	}
+}
+
+/**
+ * Switch to a different branch
+ * @param branchName - The branch name to switch to (validates with git check-ref-format)
+ */
+export async function switchToBranch(branchName: string): Promise<void> {
+	await validateBranchName(branchName);
+
+	try {
+		await execGit(["checkout", branchName]);
+	} catch (error) {
+		throw new GitError(
+			`Failed to switch to branch '${branchName}': ${error instanceof Error ? error.message : String(error)}`,
+			`git checkout ${branchName}`,
+		);
+	}
+}
+
+/**
+ * Delete a local branch
+ * @param branchName - The branch name to delete (validates with git check-ref-format)
+ * @param force - Whether to force delete the branch (default: false)
+ */
+export async function deleteLocalBranch(
+	branchName: string,
+	force = false,
+): Promise<void> {
+	await validateBranchName(branchName);
+
+	try {
+		const args = force
+			? ["branch", "-D", branchName]
+			: ["branch", "-d", branchName];
+		await execGit(args);
+	} catch (error) {
+		throw new GitError(
+			`Failed to delete local branch '${branchName}': ${error instanceof Error ? error.message : String(error)}`,
+			`git branch ${force ? "-D" : "-d"} ${branchName}`,
 		);
 	}
 }

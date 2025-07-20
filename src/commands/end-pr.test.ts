@@ -37,10 +37,13 @@ vi.mock("../utils/git.js", () => ({
 	commitChanges: vi.fn(),
 	pushChanges: vi.fn(),
 	getTagsMatchingPattern: vi.fn(),
+	switchToBranch: vi.fn(),
+	deleteLocalBranch: vi.fn(),
 }));
 
 vi.mock("../utils/version-updater.js", () => ({
 	updateMultipleProjectVersions: vi.fn(),
+	getPackageName: vi.fn(),
 }));
 
 vi.mock("../utils/github.js", () => ({
@@ -58,16 +61,21 @@ import {
 } from "../utils/config.js";
 import {
 	commitChanges,
+	deleteLocalBranch,
 	getCurrentBranch,
 	getTagsMatchingPattern,
 	pushChanges,
+	switchToBranch,
 } from "../utils/git.js";
 import {
 	checkPrExists,
 	getCurrentPrUrl,
 	mergePullRequest,
 } from "../utils/github.js";
-import { updateMultipleProjectVersions } from "../utils/version-updater.js";
+import {
+	getPackageName,
+	updateMultipleProjectVersions,
+} from "../utils/version-updater.js";
 
 // Mock typed functions
 const mockCheckInitialized = vi.mocked(checkInitialized);
@@ -84,6 +92,9 @@ const mockCheckPrExists = vi.mocked(checkPrExists);
 const mockGetCurrentPrUrl = vi.mocked(getCurrentPrUrl);
 const mockMergePullRequest = vi.mocked(mergePullRequest);
 const mockGetTagsMatchingPattern = vi.mocked(getTagsMatchingPattern);
+const mockSwitchToBranch = vi.mocked(switchToBranch);
+const mockDeleteLocalBranch = vi.mocked(deleteLocalBranch);
+const mockGetPackageName = vi.mocked(getPackageName);
 
 let mockProcessExit: MockInstance<
 	(code?: number | string | null | undefined) => never
@@ -158,6 +169,12 @@ describe("endPrCommand", () => {
 		mockDeleteBranchInfo.mockResolvedValue(undefined);
 		mockCommitChanges.mockResolvedValue(undefined);
 		mockPushChanges.mockResolvedValue(undefined);
+		mockSwitchToBranch.mockResolvedValue(undefined);
+		mockDeleteLocalBranch.mockResolvedValue(undefined);
+		mockGetPackageName.mockImplementation(async (path: string) => {
+			if (path === "package-b") return "package-b";
+			return "package-a";
+		});
 		mockUpdateMultipleProjectVersions.mockResolvedValue(undefined);
 		mockMergePullRequest.mockResolvedValue(undefined);
 		mockGetTagsMatchingPattern.mockResolvedValue([]);
@@ -269,6 +286,10 @@ describe("endPrCommand", () => {
 				"https://github.com/test/repo/pull/123",
 			);
 
+			// Should switch back to parent branch and delete feature branch
+			expect(mockSwitchToBranch).toHaveBeenCalledWith("main");
+			expect(mockDeleteLocalBranch).toHaveBeenCalledWith("feat/test(alpha)");
+
 			// Check console output
 			expect(consoleLogSpy).toHaveBeenCalledWith(
 				"🏁 Finalizing and merging PR...",
@@ -315,6 +336,10 @@ describe("endPrCommand", () => {
 			expect(mockDeleteBranchInfo).toHaveBeenCalled();
 			expect(mockMergePullRequest).toHaveBeenCalled();
 
+			// Should switch back to parent branch and delete feature branch
+			expect(mockSwitchToBranch).toHaveBeenCalledWith("main");
+			expect(mockDeleteLocalBranch).toHaveBeenCalledWith("feat/test(alpha)");
+
 			expect(consoleLogSpy).toHaveBeenCalledWith(
 				"✨ No next version configured, skipping version updates",
 			);
@@ -337,6 +362,10 @@ describe("endPrCommand", () => {
 			// Should still clean up and merge
 			expect(mockDeleteBranchInfo).toHaveBeenCalled();
 			expect(mockMergePullRequest).toHaveBeenCalled();
+
+			// Should switch back to parent branch and delete feature branch
+			expect(mockSwitchToBranch).toHaveBeenCalledWith("main");
+			expect(mockDeleteLocalBranch).toHaveBeenCalledWith("feat/test(alpha)");
 		});
 	});
 });

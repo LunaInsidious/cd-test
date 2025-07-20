@@ -354,22 +354,35 @@ export async function updateConfig(config: Config): Promise<void> {
  */
 export async function deleteBranchInfo(currentBranch: string): Promise<void> {
 	try {
+		// Parse current branch name to get branch name and tag
+		const parsed = parseBranchName(currentBranch);
+		if (!parsed) {
+			throw new Error(`Invalid branch name format: ${currentBranch}`);
+		}
+
+		// Normalize branch name for comparison with filename
+		// Replace first slash with dash, ignore everything after (and including) opening parenthesis
+		const normalizedBranchName = parsed.branchName
+			.replace(/^([^/]+)\//, "$1-") // Replace first slash with dash
+			.replace(/\(.*$/, ""); // Remove everything from opening parenthesis onwards
+
 		// Find existing branch info file
 		const files = await readdir(".cdtools");
 		const branchInfoFile = files.find((file: string) => {
+			console.log(`Checking file: ${file}`);
 			const withoutExtension = file.replace(/\.json$/, "");
 			const parts = withoutExtension.split("-");
 			if (parts.length < 2) return false;
 
 			// Extract branch name from filename (everything after first dash)
 			const filenameBranch = parts.slice(1).join("-");
-			const normalizedCurrentBranch = currentBranch.replace(
-				/[^a-zA-Z0-9]/g,
-				"-",
+			console.log(
+				`Comparing filename branch: ${filenameBranch} with normalized current branch: ${normalizedBranchName}`,
 			);
 
-			return filenameBranch === normalizedCurrentBranch;
+			return filenameBranch === normalizedBranchName;
 		});
+		console.log(`Deleting branch info file: ${branchInfoFile}`);
 
 		if (branchInfoFile) {
 			const branchInfoPath = path.join(".cdtools", branchInfoFile);

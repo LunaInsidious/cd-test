@@ -34,10 +34,52 @@ if [ ! -f "$BRANCH_INFO_FILE" ]; then
 fi
 
 if [ ! -f "$BRANCH_INFO_FILE" ]; then
-    echo "❌ Branch info file not found: $BRANCH_INFO_FILE" >&2
-    echo "🔍 Available branch info files:" >&2
-    ls -la .cdtools/*-*.json 2>/dev/null || echo "  None found" >&2
-    exit 1
+    echo "ℹ️  Branch info file not found: $BRANCH_INFO_FILE" >&2
+    echo "✅ No workspaces to process (likely after end-pr cleanup), returning empty results" >&2
+
+    # Return empty matrices based on filter
+    case "$REGISTRY_FILTER" in
+        npm)
+            if [ -n "${GITHUB_OUTPUT:-}" ]; then
+                echo "npm-matrix={\"include\":[]}" >> "$GITHUB_OUTPUT"
+                echo "has-npm=false" >> "$GITHUB_OUTPUT"
+                echo "release-tag=stable" >> "$GITHUB_OUTPUT"
+            else
+                echo "npm-matrix={\"include\":[]}"
+                echo "has-npm=false"
+                echo "release-tag=stable"
+            fi
+            ;;
+        docker)
+            if [ -n "${GITHUB_OUTPUT:-}" ]; then
+                echo "docker-matrix={\"include\":[]}" >> "$GITHUB_OUTPUT"
+                echo "has-docker=false" >> "$GITHUB_OUTPUT"
+                echo "release-tag=stable" >> "$GITHUB_OUTPUT"
+            else
+                echo "docker-matrix={\"include\":[]}"
+                echo "has-docker=false"
+                echo "release-tag=stable"
+            fi
+            ;;
+        all)
+            if [ -n "${GITHUB_OUTPUT:-}" ]; then
+                echo "npm-matrix={\"include\":[]}" >> "$GITHUB_OUTPUT"
+                echo "docker-matrix={\"include\":[]}" >> "$GITHUB_OUTPUT"
+                echo "has-npm=false" >> "$GITHUB_OUTPUT"
+                echo "has-docker=false" >> "$GITHUB_OUTPUT"
+                echo "release-tag=stable" >> "$GITHUB_OUTPUT"
+            else
+                echo "npm-matrix={\"include\":[]}"
+                echo "docker-matrix={\"include\":[]}"
+                echo "has-npm=false"
+                echo "has-docker=false"
+                echo "release-tag=stable"
+            fi
+            ;;
+    esac
+
+    echo "🔍 Analysis complete: No workspaces found" >&2
+    exit 0
 fi
 
 echo "📋 Using branch info file: $BRANCH_INFO_FILE" >&2

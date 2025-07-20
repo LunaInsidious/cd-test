@@ -41,10 +41,12 @@ vi.mock("../utils/git.js", () => ({
 	commitChanges: vi.fn(),
 	pushChanges: vi.fn(),
 	getAvailableBranches: vi.fn(),
+	getTagsMatchingPattern: vi.fn(),
 }));
 
 vi.mock("../utils/version-updater.js", () => ({
 	updateMultipleProjectVersions: vi.fn(),
+	getPackageName: vi.fn(),
 }));
 
 vi.mock("../utils/github.js", () => ({
@@ -68,13 +70,17 @@ import {
 	commitChanges,
 	getChangedFiles,
 	getCurrentBranch,
+	getTagsMatchingPattern,
 	pushChanges,
 } from "../utils/git.js";
 import {
 	checkPrExists,
 	createPullRequestInteractive,
 } from "../utils/github.js";
-import { updateMultipleProjectVersions } from "../utils/version-updater.js";
+import {
+	getPackageName,
+	updateMultipleProjectVersions,
+} from "../utils/version-updater.js";
 
 // Mock typed functions
 const mockPrompts = vi.mocked(prompts);
@@ -86,9 +92,11 @@ const mockGetChangedFiles = vi.mocked(getChangedFiles);
 const mockUpdateBranchInfo = vi.mocked(updateBranchInfo);
 const mockCommitChanges = vi.mocked(commitChanges);
 const mockPushChanges = vi.mocked(pushChanges);
+const mockGetTagsMatchingPattern = vi.mocked(getTagsMatchingPattern);
 const mockUpdateMultipleProjectVersions = vi.mocked(
 	updateMultipleProjectVersions,
 );
+const mockGetPackageName = vi.mocked(getPackageName);
 const mockCheckPrExists = vi.mocked(checkPrExists);
 const mockCreatePullRequestInteractive = vi.mocked(
 	createPullRequestInteractive,
@@ -155,7 +163,12 @@ describe("pushPrCommand", () => {
 		mockUpdateBranchInfo.mockResolvedValue(undefined);
 		mockCommitChanges.mockResolvedValue(undefined);
 		mockPushChanges.mockResolvedValue(undefined);
+		mockGetTagsMatchingPattern.mockResolvedValue([]);
 		mockUpdateMultipleProjectVersions.mockResolvedValue(undefined);
+		mockGetPackageName.mockImplementation(async (path: string) => {
+			if (path === "package-b") return "package-b";
+			return "package-a";
+		});
 		mockCheckPrExists.mockResolvedValue(false);
 		mockCreatePullRequestInteractive.mockResolvedValue(
 			"https://github.com/test/repo/pull/123",

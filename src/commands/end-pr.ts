@@ -11,9 +11,11 @@ import {
 } from "../utils/config.js";
 import {
 	commitChanges,
+	deleteLocalBranch,
 	getCurrentBranch,
 	getTagsMatchingPattern,
 	pushChanges,
+	switchToBranch,
 } from "../utils/git.js";
 import {
 	checkPrExists,
@@ -174,7 +176,8 @@ export async function endPrCommand(): Promise<void> {
 		if (Object.keys(newVersions).length > 0) {
 			console.log("\n📋 Next version updates:");
 			for (const [projectPath, version] of Object.entries(newVersions)) {
-				console.log(`  • ${projectPath}: ${version}`);
+				const packageName = await getPackageName(projectPath);
+				console.log(`  • ${packageName}: ${version}`);
 			}
 
 			// Update version files
@@ -220,6 +223,23 @@ export async function endPrCommand(): Promise<void> {
 	console.log("\n🔀 Merging pull request...");
 	await mergePullRequest(prUrl);
 
+	// Switch back to parent branch and delete the feature branch
+	console.log(`\n🔄 Switching back to ${branchInfo.parentBranch} branch...`);
+	await switchToBranch(branchInfo.parentBranch);
+
+	console.log(`🗑️  Deleting local branch: ${currentBranch}`);
+	try {
+		await deleteLocalBranch(currentBranch);
+		console.log(`✅ Local branch '${currentBranch}' deleted successfully`);
+	} catch (error) {
+		console.warn(
+			`⚠️  Failed to delete local branch '${currentBranch}': ${error instanceof Error ? error.message : String(error)}`,
+		);
+		console.warn(
+			`You may need to delete it manually with: git branch -d ${currentBranch}`,
+		);
+	}
+
 	console.log("✅ End PR completed successfully!");
 }
 
@@ -243,6 +263,9 @@ async function calculateNextVersions(
 		return result;
 	}
 
+	// Check if the next tag is a stable release
+	const isNextStableRelease = isStableTag(config, nextTag);
+
 	for (const [projectPath] of Object.entries(branchInfo.workspaceUpdated)) {
 		const project = config.projects.find((p) => p.path === projectPath);
 		if (!project) {
@@ -250,12 +273,26 @@ async function calculateNextVersions(
 			continue;
 		}
 
-		// Calculate new version with next tag
-		const newVersion = await generateVersionWithSuffix(
-			project.baseVersion,
-			nextTag,
-			versionSuffixStrategy,
-		);
+		let newVersion: string;
+		if (isNextStableRelease) {
+			// For stable releases, no suffix - use the current workspace version without suffix
+			const currentWorkspaceVersion = branchInfo.workspaceUpdated[projectPath];
+			if (currentWorkspaceVersion) {
+				// Remove suffix from current version (e.g., "1.1.0-rc.0" -> "1.1.0")
+				const versionParts = currentWorkspaceVersion.split("-");
+				newVersion = versionParts[0] || currentWorkspaceVersion;
+			} else {
+				// Fallback to base version if no workspace version exists
+				newVersion = project.baseVersion;
+			}
+		} else {
+			// For non-stable releases, generate version with suffix
+			newVersion = await generateVersionWithSuffix(
+				project.baseVersion,
+				nextTag,
+				versionSuffixStrategy,
+			);
+		}
 
 		result[projectPath] = newVersion;
 	}
@@ -300,6 +337,38 @@ async function generateVersionWithSuffix(
 }
 
 /**
+ * Extract increment numbers from existing tags
+ * @param existingTags - Array of existing git tags
+ * @param baseVersion - The base version to check
+ * @param tag - The tag name to check
+ * @returns Next increment number
+ */
+export function getNextIncrementFromTags(
+	existingTags: string[],
+	baseVersion: string,
+	tag: string,
+): number {
+	// Create regex pattern to match version tags with increment numbers
+	// Supports both formats: "1.0.0-alpha.0" and "library-name-1.0.0-alpha.0"
+	const escapedBaseVersion = escapeRegexMetaCharacters(baseVersion);
+	const escapedTag = escapeRegexMetaCharacters(tag);
+	const incrementRegex = new RegExp(
+		`^(?:.*-)?${escapedBaseVersion}-${escapedTag}\\.(\\d+)$`,
+	);
+
+	// Extract increment numbers from matching tags
+	const increments = existingTags
+		.map((tagName) => {
+			const match = tagName.match(incrementRegex);
+			return match?.[1] ? parseInt(match[1], 10) : -1;
+		})
+		.filter((num) => num >= 0);
+
+	// Return next increment (highest + 1, or 0 if none exist)
+	return increments.length > 0 ? Math.max(...increments) + 1 : 0;
+}
+
+/**
  * Get the next increment number for a given base version and tag
  * Checks existing git tags to find the highest increment and returns next
  * @param baseVersion - The base version to check (e.g., "1.0.0")
@@ -311,27 +380,10 @@ async function getNextIncrement(
 	tag: string,
 ): Promise<number> {
 	try {
-		// Look for tags like "1.0.0-alpha.0", "1.0.0-alpha.1", etc.
-		const tagPattern = `${baseVersion}-${tag}.*`;
+		// Look for tags like "1.0.0-alpha.0", "1.0.0-alpha.1", "lib-1.0.0-alpha.0", etc.
+		const tagPattern = `*${baseVersion}-${tag}.*`;
 		const existingTags = await getTagsMatchingPattern(tagPattern);
-
-		// Create regex pattern to match version tags with increment numbers
-		const escapedBaseVersion = escapeRegexMetaCharacters(baseVersion);
-		const escapedTag = escapeRegexMetaCharacters(tag);
-		const incrementRegex = new RegExp(
-			`^${escapedBaseVersion}-${escapedTag}\\.(\\d+)$`,
-		);
-
-		// Extract increment numbers from matching tags
-		const increments = existingTags
-			.map((tagName) => {
-				const match = tagName.match(incrementRegex);
-				return match?.[1] ? parseInt(match[1], 10) : -1;
-			})
-			.filter((num) => num >= 0);
-
-		// Return next increment (highest + 1, or 0 if none exist)
-		return increments.length > 0 ? Math.max(...increments) + 1 : 0;
+		return getNextIncrementFromTags(existingTags, baseVersion, tag);
 	} catch (error) {
 		// If git tag lookup fails, default to 0
 		console.warn(
@@ -459,13 +511,22 @@ if (import.meta.vitest) {
 			expect(result).toMatch(/^1\.0\.0-rc\.\d{14}$/);
 		});
 
-		it("should generate increment versions", async () => {
-			const result = await generateVersionWithSuffix(
-				"1.0.0",
-				"rc",
-				"increment",
-			);
-			expect(result).toBe("1.0.0-rc.0");
+		it("should generate increment versions", () => {
+			// Test the getNextIncrementFromTags function directly
+			const existingTags = [
+				"1.0.0-alpha.0",
+				"1.0.0-alpha.1",
+				"1.0.0-rc.0",
+			];
+			
+			// Should return 1 for rc since rc.0 exists
+			expect(getNextIncrementFromTags(existingTags, "1.0.0", "rc")).toBe(1);
+			
+			// Should return 2 for alpha since alpha.0 and alpha.1 exist
+			expect(getNextIncrementFromTags(existingTags, "1.0.0", "alpha")).toBe(2);
+			
+			// Test empty tags
+			expect(getNextIncrementFromTags([], "2.0.0", "beta")).toBe(0);
 		});
 	});
 }
