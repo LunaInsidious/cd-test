@@ -1,6 +1,6 @@
 {
 	"name": "cd-tools",
-	"version": "1.0.1-alpha.20250720140100",
+	"version": "1.0.1-alpha.20250720140301",
 	"bin": {
 		"cd-tools": "dist/index.js"
 	},
@@ -27,14 +27,12 @@
 		"@biomejs/biome": "2.1.2",
 		"@types/node": "^22.15.2",
 		"@vitest/coverage-v8": "^3.2.4",
-		"typescript": "^5.8.3",
-		"typescript-language-server": "^4.3.4",
-		"zod": "^4.0.5",
-		"@types/prompts": "2.4.9"
+		"typescript": "^5.8.3"
 	},
 	"dependencies": {
 		"@tsconfig/strictest": "^2.0.5",
 		"vitest": "^3.2.4",
-		"prompts": "2.4.2"
+		"prompts": "2.4.2",
+		"@types/prompts": "2.4.9"
 	}
 }
