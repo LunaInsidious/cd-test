@@ -1,6 +1,6 @@
 {
 	"name": "cd-tools",
-	"version": "1.0.1-alpha.20250720135620",
+	"version": "1.0.1-alpha.20250720135749",
 	"bin": {
 		"cd-tools": "dist/index.js"
 	},
@@ -25,7 +25,6 @@
 	"description": "CD (Continuous Deployment) tool for monorepo management",
 	"devDependencies": {
 		"@biomejs/biome": "2.1.2",
-		"@tsconfig/strictest": "^2.0.5",
 		"@types/node": "^22.15.2",
 		"@vitest/coverage-v8": "^3.2.4",
 		"typescript": "^5.8.3",
@@ -35,6 +34,7 @@
 		"@types/prompts": "2.4.9"
 	},
 	"dependencies": {
+		"@tsconfig/strictest": "^2.0.5",
 		"prompts": "2.4.2"
 	}
 }
