@@ -357,6 +357,7 @@ export async function deleteBranchInfo(currentBranch: string): Promise<void> {
 		// Find existing branch info file
 		const files = await readdir(".cdtools");
 		const branchInfoFile = files.find((file: string) => {
+			console.log(`Checking file: ${file}`);
 			const withoutExtension = file.replace(/\.json$/, "");
 			const parts = withoutExtension.split("-");
 			if (parts.length < 2) return false;
