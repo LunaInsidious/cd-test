@@ -1,8 +1,16 @@
 name: Publish npm Package
 
 on:
-  # TODO: 差分があるワークスペースとその依存関係についてのみ発火するようにする。
-  # 想定としては、このワークフローをuseする親ワークフローがあって、そのワークフロー内で差分解析し、matrixで各ワークスペースで並列実行するようにする。
+  workflow_call:
+    inputs:
+      workspace_path:
+        description: 'Path to the workspace to publish'
+        required: true
+        type: string
+      workspace_version:
+        description: 'Version to publish for the workspace'
+        required: true
+        type: string
 
 permissions:
   contents: write
@@ -10,7 +18,7 @@ permissions:
 
 jobs:
   publish:
-    name: Publish npm Package
+    name: Publish npm Package (${{ inputs.workspace_path }})
     runs-on: ubuntu-latest
     steps:
       - name: Check out the repo
@@ -28,21 +36,33 @@ jobs:
           scope: ${{ '@' }}${{ github.repository_owner }}
       - name: Get package name to be released
         id: get-name
+        working-directory: ${{ inputs.workspace_path }}
         run: node -e "console.log('name=' + require('./package.json').name)" >> "$GITHUB_OUTPUT"
-      - name: Get version to be released
-        id: get-version
-        run: node -e "console.log('version=' + require('./package.json').version)" >> "$GITHUB_OUTPUT"
+      - name: Verify version matches expected
+        working-directory: ${{ inputs.workspace_path }}
+        run: |
+          ACTUAL_VERSION=$(node -e "console.log(require('./package.json').version)")
+          if [ "$ACTUAL_VERSION" != "${{ inputs.workspace_version }}" ]; then
+            echo "❌ Version mismatch: expected ${{ inputs.workspace_version }}, got $ACTUAL_VERSION"
+            exit 1
+          fi
+          echo "✅ Version verified: $ACTUAL_VERSION"
+      - name: Install dependencies
+        working-directory: ${{ inputs.workspace_path }}
+        run: npm install --immutable --immutable-cache --check-cache
       - name: Publish npm package
+        working-directory: ${{ inputs.workspace_path }}
         run: |
           echo "@${GITHUB_REPOSITORY_OWNER}:registry=https://npm.pkg.github.com" >> .npmrc
           echo "//npm.pkg.github.com/:_authToken=${NPM_AUTH_TOKEN}" >> .npmrc
-          npm install --immutable --immutable-cache --check-cache
           npm publish
         env:
           NPM_AUTH_TOKEN: ${{secrets.GITHUB_TOKEN}}
       - name: Add Tag
         run: |
-          git tag v${VERSION}
-          git push --tags origin v${VERSION}
+          TAG_NAME="${WORKSPACE_PATH//\//-}-v${VERSION}"
+          git tag "$TAG_NAME"
+          git push --tags origin "$TAG_NAME"
         env:
-          VERSION: ${{ steps.get-version.outputs.version }}
+          WORKSPACE_PATH: ${{ inputs.workspace_path }}
+          VERSION: ${{ inputs.workspace_version }}

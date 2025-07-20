@@ -11,6 +11,7 @@ import {
 	loadBranchInfo,
 	loadConfig,
 	updateBranchInfo,
+	updateConfig,
 } from "../utils/config.js";
 import {
 	commitChanges,
@@ -132,8 +133,31 @@ export async function pushPrCommand(): Promise<void> {
 
 		await updateMultipleProjectVersions(projectsToUpdateObjs, filteredVersions);
 
-		// Update branch info with workspace updates
-		await updateBranchInfo(currentBranch, filteredVersions);
+		// Handle stable vs non-stable releases differently
+		const isStableRelease = isStableTag(config, branchInfo.tag);
+		
+		if (isStableRelease) {
+			// For stable releases: update baseVersion in config and clear workspaceUpdated
+			console.log("📝 Updating baseVersion for stable release...");
+			
+			// Update project baseVersions to the new stable versions
+			const updatedConfig = { ...config };
+			for (const project of updatedConfig.projects) {
+				const newVersion = filteredVersions[project.path];
+				if (newVersion) {
+					project.baseVersion = newVersion;
+				}
+			}
+			
+			// Save updated config
+			await updateConfig(updatedConfig);
+			
+			// Clear workspaceUpdated from branch info for stable releases
+			await updateBranchInfo(currentBranch, {});
+		} else {
+			// For non-stable releases: update branch info with workspace updates
+			await updateBranchInfo(currentBranch, filteredVersions);
+		}
 
 		// Generate commit message
 		const versionEntries = Object.entries(filteredVersions)
@@ -244,12 +268,15 @@ async function calculateNewVersions(
 	const result: Record<string, string> = {};
 
 	// Get the version tag configuration for the current release mode
-	const currentVersionTag = getCurrentVersionTag(config, branchInfo.tag);
+	const currentVersionTag = getVersionTagConfig(config, branchInfo.tag);
 	if (!currentVersionTag) {
 		throw new Error(
 			`Version tag '${branchInfo.tag}' not found in configuration`,
 		);
 	}
+
+	// Check if this is a stable release
+	const isStableRelease = isStableTag(config, branchInfo.tag);
 
 	for (const project of config.projects) {
 		const projectPath = project.path;
@@ -290,7 +317,11 @@ async function calculateNewVersions(
 
 		let newVersion: string;
 
-		if (hasBeenReleased && currentProjectVersion) {
+		if (isStableRelease) {
+			// For stable releases, no suffix - just the base version with bump applied
+			const newBaseVersion = bumpVersion(project.baseVersion, selectedBump);
+			newVersion = newBaseVersion;
+		} else if (hasBeenReleased && currentProjectVersion) {
 			// Use the existing workspaceUpdated version, just update suffix
 			const existingVersionBase = currentProjectVersion.split("-")[0];
 			if (!existingVersionBase) {

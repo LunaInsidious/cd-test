@@ -17,12 +17,17 @@ import {
 import { endPrCommand } from "./end-pr.js";
 
 // Mock external dependencies
-vi.mock("../utils/config.js", () => ({
-	checkInitialized: vi.fn(),
-	loadConfig: vi.fn(),
-	loadBranchInfo: vi.fn(),
-	deleteBranchInfo: vi.fn(),
-}));
+vi.mock("../utils/config.js", async (importOriginal) => {
+	const actual = await importOriginal();
+	return {
+		...actual,
+		checkInitialized: vi.fn(),
+		deleteBranchInfo: vi.fn(),
+		loadBranchInfo: vi.fn(),
+		loadConfig: vi.fn(),
+		updateConfig: vi.fn(),
+	};
+});
 
 vi.mock("../utils/git.js", () => ({
 	getCurrentBranch: vi.fn(),
@@ -47,6 +52,7 @@ import {
 	deleteBranchInfo,
 	loadBranchInfo,
 	loadConfig,
+	updateConfig,
 } from "../utils/config.js";
 import {
 	commitChanges,
@@ -67,6 +73,7 @@ const mockLoadConfig = vi.mocked(loadConfig);
 const mockLoadBranchInfo = vi.mocked(loadBranchInfo);
 const mockGetCurrentBranch = vi.mocked(getCurrentBranch);
 const mockDeleteBranchInfo = vi.mocked(deleteBranchInfo);
+const mockUpdateConfig = vi.mocked(updateConfig);
 const mockCommitChanges = vi.mocked(commitChanges);
 const mockPushChanges = vi.mocked(pushChanges);
 const mockUpdateMultipleProjectVersions = vi.mocked(

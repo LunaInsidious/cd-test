@@ -166,7 +166,8 @@ describe("initCommand", () => {
 			mockPrompts.mockResolvedValue({ registries: ["npm"] });
 			mockCopyFile
 				.mockResolvedValueOnce() // config copy succeeds
-				.mockRejectedValueOnce(new Error("Workflow copy failed")); // workflow copy fails
+				.mockResolvedValueOnce() // release workflow copy succeeds
+				.mockRejectedValueOnce(new Error("Workflow copy failed")); // npm workflow copy fails
 
 			await initCommand();
 
@@ -177,6 +178,22 @@ describe("initCommand", () => {
 			expect(consoleSpy).toHaveBeenCalledWith(
 				"🎉 CD tools initialization complete!",
 			);
+		});
+
+		it("should exit if release workflow copy fails", async () => {
+			mockAccess.mockRejectedValue(new Error("File not found"));
+			mockPrompts.mockResolvedValue({ registries: ["npm"] });
+			mockCopyFile
+				.mockResolvedValueOnce() // config copy succeeds
+				.mockRejectedValueOnce(new Error("Release workflow copy failed")); // release workflow copy fails
+
+			await expect(initCommand()).rejects.toThrow("process.exit called");
+
+			expect(console.error).toHaveBeenCalledWith(
+				"❌ Failed to copy release workflow:",
+				expect.any(Error),
+			);
+			expect(process.exit).toHaveBeenCalledWith(1);
 		});
 	});
 

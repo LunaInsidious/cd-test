@@ -3,8 +3,11 @@ import {
 	type Config,
 	checkInitialized,
 	deleteBranchInfo,
+	getVersionTagConfig,
+	isStableTag,
 	loadBranchInfo,
 	loadConfig,
+	updateConfig,
 } from "../utils/config.js";
 import {
 	commitChanges,
@@ -83,11 +86,50 @@ export async function endPrCommand(): Promise<void> {
 	console.log(`📋 Pull request URL: ${prUrl}`);
 
 	// Get the current version tag configuration
-	const currentVersionTag = getCurrentVersionTag(config, branchInfo.tag);
+	const currentVersionTag = getVersionTagConfig(config, branchInfo.tag);
 	if (!currentVersionTag) {
 		throw new Error(
 			`Version tag '${branchInfo.tag}' not found in configuration`,
 		);
+	}
+
+	// Check if this is a stable release
+	const isStableRelease = isStableTag(config, branchInfo.tag);
+	
+	if (isStableRelease) {
+		// For stable releases, update baseVersion in config.json with current workspaceUpdated
+		if (branchInfo.workspaceUpdated && Object.keys(branchInfo.workspaceUpdated).length > 0) {
+			console.log("📝 Updating baseVersion for stable release...");
+			
+			// Update project baseVersions to the released stable versions
+			const updatedConfig = { ...config };
+			for (const project of updatedConfig.projects) {
+				const stableVersion = branchInfo.workspaceUpdated[project.path];
+				if (stableVersion) {
+					project.baseVersion = stableVersion;
+				}
+			}
+			
+			// Save updated config
+			await updateConfig(updatedConfig);
+			
+			console.log("\n📋 Updated baseVersions:");
+			for (const [projectPath, version] of Object.entries(branchInfo.workspaceUpdated)) {
+				console.log(`  • ${projectPath}: ${version}`);
+			}
+			
+			// Commit config changes
+			const versionEntries = Object.entries(branchInfo.workspaceUpdated)
+				.map(([path, version]) => `${path}(${version})`)
+				.join(", ");
+			const commitMessage = `update baseVersion for stable release: ${versionEntries}`;
+			
+			console.log(`\n📝 Committing baseVersion updates: ${commitMessage}`);
+			await commitChanges(commitMessage);
+			
+			console.log("📤 Pushing baseVersion updates...");
+			await pushChanges(currentBranch);
+		}
 	}
 
 	// Get the next version tag configuration
@@ -97,7 +139,7 @@ export async function endPrCommand(): Promise<void> {
 	} else {
 		console.log(`📈 Updating to next version tag: ${nextTag}`);
 
-		const nextVersionTag = getCurrentVersionTag(config, nextTag);
+		const nextVersionTag = getVersionTagConfig(config, nextTag);
 		if (!nextVersionTag) {
 			throw new Error(
 				`Next version tag '${nextTag}' not found in configuration`,
@@ -160,14 +202,6 @@ export async function endPrCommand(): Promise<void> {
 /**
  * Get version tag configuration for the specified tag name
  */
-function getCurrentVersionTag(config: Config, tagName: string) {
-	for (const versionTag of config.versionTags) {
-		if (versionTag[tagName]) {
-			return versionTag[tagName];
-		}
-	}
-	return null;
-}
 
 /**
  * Calculate new versions for the next release tag
@@ -286,7 +320,7 @@ async function getNextIncrement(
 if (import.meta.vitest) {
 	const { expect, it, describe, vi } = import.meta.vitest;
 
-	describe("getCurrentVersionTag", () => {
+	describe("getVersionTagConfig", () => {
 		it("should find version tag configuration", () => {
 			const config = {
 				versioningStrategy: "fixed" as const,
@@ -307,15 +341,15 @@ if (import.meta.vitest) {
 				projects: [],
 			};
 
-			expect(getCurrentVersionTag(config, "alpha")).toEqual({
+			expect(getVersionTagConfig(config, "alpha")).toEqual({
 				versionSuffixStrategy: "timestamp",
 				next: "rc",
 			});
-			expect(getCurrentVersionTag(config, "rc")).toEqual({
+			expect(getVersionTagConfig(config, "rc")).toEqual({
 				versionSuffixStrategy: "increment",
 				next: "stable",
 			});
-			expect(getCurrentVersionTag(config, "unknown")).toBe(null);
+			expect(getVersionTagConfig(config, "unknown")).toBe(null);
 		});
 	});
 

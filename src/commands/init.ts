@@ -74,11 +74,30 @@ export async function initCommand(): Promise<void> {
 		return;
 	}
 
+	// Ensure .github/workflows directory exists
+	try {
+		await mkdir(".github/workflows", { recursive: true });
+	} catch (error) {
+		console.error("❌ Failed to create .github/workflows directory:", error);
+		process.exit(1);
+	}
+
 	// Copy workflow files based on selection
 	const defaultFilesDir = join(
 		dirname(dirname(import.meta.dirname)),
 		"default-files",
 	);
+
+	// Always copy the main release workflow
+	try {
+		const releaseSourceFile = join(defaultFilesDir, "release.yml");
+		const releaseTargetFile = ".github/workflows/release.yml";
+		await copyFile(releaseSourceFile, releaseTargetFile);
+		console.log("✅ Copied release orchestration workflow");
+	} catch (error) {
+		console.error("❌ Failed to copy release workflow:", error);
+		process.exit(1);
+	}
 
 	for (const registry of registries) {
 		try {

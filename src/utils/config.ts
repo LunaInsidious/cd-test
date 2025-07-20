@@ -334,6 +334,21 @@ export function getBumpTypesFromWorkspaceUpdated(
 }
 
 /**
+ * Update config.json with new project configurations
+ * @param config - The updated configuration object
+ */
+export async function updateConfig(config: Config): Promise<void> {
+	try {
+		const configPath = path.join(".cdtools", "config.json");
+		await writeFile(configPath, JSON.stringify(config, null, "\t"));
+	} catch (error) {
+		throw new Error(
+			`Failed to update configuration: ${error instanceof Error ? error.message : String(error)}`,
+		);
+	}
+}
+
+/**
  * Delete branch info file for current branch
  * @param currentBranch - The current branch name
  */

@@ -54,6 +54,7 @@ TODOリスト
   - [ ] push-pr,end-prの際に、もしstableリリースであれば`/.cd-tools/config.json`のstableリリースするprojectのbaseVersionを更新する
   - [ ] push-prの際に、もしstableリリースであればブランチ情報ファイルのworkspaceUpdatedを削除する
   - [ ] `/default-files/publish-npm.yml`,`/default-files/publish-container-image.yml`について、ymlにTODOとして記載しているように、ブランチ情報ファイルの`workspaceUpdated`に基づいて並列で各ワークスペースのリリースができるようにする。
+  - [ ] actを使ったGithub Actionsのテスト
 - フェーズ6(リファクタ)
   - [ ] letを使っている箇所は関数切り出しでなくせるので、letを0にする
   - [ ] start-prなどでもinsource testingをする
