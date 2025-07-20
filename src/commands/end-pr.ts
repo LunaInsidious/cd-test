@@ -498,12 +498,25 @@ if (import.meta.vitest) {
 		});
 
 		it("should generate increment versions", async () => {
+			vi.mock("../utils/git.js", (importOriginal) => {
+				const original = importOriginal();
+				return {
+					...original,
+					getTagsMatchingPattern: vi
+						.fn()
+						.mockResolvedValue([
+							"1.0.0-alpha.0",
+							"1.0.0-alpha.1",
+							"1.0.0-rc.0",
+						]),
+				};
+			});
 			const result = await generateVersionWithSuffix(
 				"1.0.0",
 				"rc",
 				"increment",
 			);
-			expect(result).toBe("1.0.0-rc.0");
+			expect(result).toBe("1.0.0-rc.1");
 		});
 	});
 }

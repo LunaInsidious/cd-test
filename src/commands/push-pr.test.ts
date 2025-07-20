@@ -41,6 +41,7 @@ vi.mock("../utils/git.js", () => ({
 	commitChanges: vi.fn(),
 	pushChanges: vi.fn(),
 	getAvailableBranches: vi.fn(),
+	getTagsMatchingPattern: vi.fn(),
 }));
 
 vi.mock("../utils/version-updater.js", () => ({
@@ -69,6 +70,7 @@ import {
 	commitChanges,
 	getChangedFiles,
 	getCurrentBranch,
+	getTagsMatchingPattern,
 	pushChanges,
 } from "../utils/git.js";
 import {
@@ -90,6 +92,7 @@ const mockGetChangedFiles = vi.mocked(getChangedFiles);
 const mockUpdateBranchInfo = vi.mocked(updateBranchInfo);
 const mockCommitChanges = vi.mocked(commitChanges);
 const mockPushChanges = vi.mocked(pushChanges);
+const mockGetTagsMatchingPattern = vi.mocked(getTagsMatchingPattern);
 const mockUpdateMultipleProjectVersions = vi.mocked(
 	updateMultipleProjectVersions,
 );
@@ -160,6 +163,7 @@ describe("pushPrCommand", () => {
 		mockUpdateBranchInfo.mockResolvedValue(undefined);
 		mockCommitChanges.mockResolvedValue(undefined);
 		mockPushChanges.mockResolvedValue(undefined);
+		mockGetTagsMatchingPattern.mockResolvedValue([]);
 		mockUpdateMultipleProjectVersions.mockResolvedValue(undefined);
 		mockGetPackageName.mockImplementation(async (path: string) => {
 			if (path === "package-b") return "package-b";

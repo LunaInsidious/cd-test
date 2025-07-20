@@ -215,6 +215,8 @@ export async function getTagsMatchingPattern(
 	pattern: string,
 ): Promise<string[]> {
 	try {
+		// fetch remote tags first
+		await execGit(["fetch", "--tags"]);
 		const output = await execGit(["tag", "-l", pattern]);
 		return output ? output.split("\n").filter(Boolean) : [];
 	} catch (error) {
