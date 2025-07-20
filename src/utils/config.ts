@@ -370,6 +370,7 @@ export async function deleteBranchInfo(currentBranch: string): Promise<void> {
 
 			return filenameBranch === normalizedCurrentBranch;
 		});
+		console.log(`Deleting branch info file: ${branchInfoFile}`);
 
 		if (branchInfoFile) {
 			const branchInfoPath = path.join(".cdtools", branchInfoFile);
