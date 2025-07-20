@@ -1,4 +1,7 @@
 {
 	"tag": "rc",
-	"parentBranch": "main"
+	"parentBranch": "main",
+	"workspaceUpdated": {
+		".": "1.0.1-rc.0"
+	}
 }
