@@ -158,7 +158,6 @@ export async function pushPrCommand(): Promise<void> {
 			// Save updated config
 			await updateConfig(updatedConfig);
 		}
-		console.log(filteredVersions);
 		await updateBranchInfo(currentBranch, filteredVersions);
 
 		// Generate commit message using package names

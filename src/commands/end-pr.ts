@@ -160,9 +160,11 @@ export async function endPrCommand(): Promise<void> {
 					);
 				}
 			}
-			await updateBranchInfo(currentBranch, newVersions);
 
 			await updateMultipleProjectVersions(projectsToUpdate, newVersions);
+
+			// Update branch info with the new versions for next tag
+			await updateBranchInfo(currentBranch, newVersions);
 
 			// Generate commit message using package names
 			const versionEntries = [];
