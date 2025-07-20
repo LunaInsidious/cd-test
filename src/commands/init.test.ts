@@ -55,8 +55,16 @@ describe("initCommand", () => {
 				".cdtools/config.json",
 			);
 			expect(mockCopyFile).toHaveBeenCalledWith(
+				expect.stringContaining("default-files/release-npm.yml"),
+				".github/workflows/release-npm.yml",
+			);
+			expect(mockCopyFile).toHaveBeenCalledWith(
 				expect.stringContaining("default-files/publish-npm.yml"),
 				".github/workflows/publish-npm.yml",
+			);
+			expect(mockCopyFile).toHaveBeenCalledWith(
+				expect.stringContaining("default-files/analyze-workspaces.sh"),
+				".github/scripts/analyze-workspaces.sh",
 			);
 			expect(consoleSpy).toHaveBeenCalledWith(
 				"🎉 CD tools initialization complete!",
@@ -70,8 +78,16 @@ describe("initCommand", () => {
 			await initCommand();
 
 			expect(mockCopyFile).toHaveBeenCalledWith(
+				expect.stringContaining("default-files/release-docker.yml"),
+				".github/workflows/release-docker.yml",
+			);
+			expect(mockCopyFile).toHaveBeenCalledWith(
 				expect.stringContaining("default-files/publish-container-image.yml"),
 				".github/workflows/publish-container-image.yml",
+			);
+			expect(mockCopyFile).toHaveBeenCalledWith(
+				expect.stringContaining("default-files/analyze-workspaces.sh"),
+				".github/scripts/analyze-workspaces.sh",
 			);
 		});
 
@@ -82,12 +98,24 @@ describe("initCommand", () => {
 			await initCommand();
 
 			expect(mockCopyFile).toHaveBeenCalledWith(
+				expect.stringContaining("default-files/release-npm.yml"),
+				".github/workflows/release-npm.yml",
+			);
+			expect(mockCopyFile).toHaveBeenCalledWith(
 				expect.stringContaining("default-files/publish-npm.yml"),
 				".github/workflows/publish-npm.yml",
 			);
 			expect(mockCopyFile).toHaveBeenCalledWith(
+				expect.stringContaining("default-files/release-docker.yml"),
+				".github/workflows/release-docker.yml",
+			);
+			expect(mockCopyFile).toHaveBeenCalledWith(
 				expect.stringContaining("default-files/publish-container-image.yml"),
 				".github/workflows/publish-container-image.yml",
+			);
+			expect(mockCopyFile).toHaveBeenCalledWith(
+				expect.stringContaining("default-files/analyze-workspaces.sh"),
+				".github/scripts/analyze-workspaces.sh",
 			);
 		});
 	});
@@ -166,8 +194,7 @@ describe("initCommand", () => {
 			mockPrompts.mockResolvedValue({ registries: ["npm"] });
 			mockCopyFile
 				.mockResolvedValueOnce() // config copy succeeds
-				.mockResolvedValueOnce() // release workflow copy succeeds
-				.mockRejectedValueOnce(new Error("Workflow copy failed")); // npm workflow copy fails
+				.mockRejectedValueOnce(new Error("Workflow copy failed")); // release-npm workflow copy fails
 
 			await initCommand();
 
@@ -178,22 +205,6 @@ describe("initCommand", () => {
 			expect(consoleSpy).toHaveBeenCalledWith(
 				"🎉 CD tools initialization complete!",
 			);
-		});
-
-		it("should exit if release workflow copy fails", async () => {
-			mockAccess.mockRejectedValue(new Error("File not found"));
-			mockPrompts.mockResolvedValue({ registries: ["npm"] });
-			mockCopyFile
-				.mockResolvedValueOnce() // config copy succeeds
-				.mockRejectedValueOnce(new Error("Release workflow copy failed")); // release workflow copy fails
-
-			await expect(initCommand()).rejects.toThrow("process.exit called");
-
-			expect(console.error).toHaveBeenCalledWith(
-				"❌ Failed to copy release workflow:",
-				expect.any(Error),
-			);
-			expect(process.exit).toHaveBeenCalledWith(1);
 		});
 	});
 

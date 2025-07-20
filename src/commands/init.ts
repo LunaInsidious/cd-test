@@ -74,11 +74,12 @@ export async function initCommand(): Promise<void> {
 		return;
 	}
 
-	// Ensure .github/workflows directory exists
+	// Ensure .github/workflows and .github/scripts directories exist
 	try {
 		await mkdir(".github/workflows", { recursive: true });
+		await mkdir(".github/scripts", { recursive: true });
 	} catch (error) {
-		console.error("❌ Failed to create .github/workflows directory:", error);
+		console.error("❌ Failed to create .github directories:", error);
 		process.exit(1);
 	}
 
@@ -88,41 +89,56 @@ export async function initCommand(): Promise<void> {
 		"default-files",
 	);
 
-	// Always copy the main release workflow
-	try {
-		const releaseSourceFile = join(defaultFilesDir, "release.yml");
-		const releaseTargetFile = ".github/workflows/release.yml";
-		await copyFile(releaseSourceFile, releaseTargetFile);
-		console.log("✅ Copied release orchestration workflow");
-	} catch (error) {
-		console.error("❌ Failed to copy release workflow:", error);
-		process.exit(1);
-	}
-
+	// Copy registry-specific workflows
 	for (const registry of registries) {
 		try {
-			let sourceFile: string;
-			let targetFile: string;
+			const workflows: { source: string; target: string }[] = [];
 
 			switch (registry) {
 				case "npm":
-					sourceFile = join(defaultFilesDir, "publish-npm.yml");
-					targetFile = ".github/workflows/publish-npm.yml";
+					workflows.push({
+						source: join(defaultFilesDir, "release-npm.yml"),
+						target: ".github/workflows/release-npm.yml",
+					});
+					workflows.push({
+						source: join(defaultFilesDir, "publish-npm.yml"),
+						target: ".github/workflows/publish-npm.yml",
+					});
 					break;
 				case "docker":
-					sourceFile = join(defaultFilesDir, "publish-container-image.yml");
-					targetFile = ".github/workflows/publish-container-image.yml";
+					workflows.push({
+						source: join(defaultFilesDir, "release-docker.yml"),
+						target: ".github/workflows/release-docker.yml",
+					});
+					workflows.push({
+						source: join(defaultFilesDir, "publish-container-image.yml"),
+						target: ".github/workflows/publish-container-image.yml",
+					});
 					break;
 				default:
 					console.warn(`⚠️  Unknown registry: ${registry}`);
 					continue;
 			}
 
-			await copyFile(sourceFile, targetFile);
-			console.log(`✅ Copied workflow for ${registry}`);
+			// Copy all workflows for this registry
+			for (const workflow of workflows) {
+				await copyFile(workflow.source, workflow.target);
+				console.log(`✅ Copied ${workflow.target.split("/").pop()}`);
+			}
 		} catch (error) {
 			console.error(`❌ Failed to copy workflow for ${registry}:`, error);
 		}
+	}
+
+	// Copy analyze-workspaces.sh script
+	try {
+		const analyzeScriptSource = join(defaultFilesDir, "analyze-workspaces.sh");
+		const analyzeScriptTarget = ".github/scripts/analyze-workspaces.sh";
+		await copyFile(analyzeScriptSource, analyzeScriptTarget);
+		console.log("✅ Copied analyze-workspaces.sh script");
+	} catch (error) {
+		console.error("❌ Failed to copy analyze-workspaces.sh:", error);
+		process.exit(1);
 	}
 
 	console.log("🎉 CD tools initialization complete!");
