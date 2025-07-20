@@ -97,14 +97,14 @@ export async function endPrCommand(): Promise<void> {
 		);
 	}
 
-	// Check if this is a stable release
-	const isStableRelease = isStableTag(branchInfo.tag);
-
 	// Get the next version tag configuration
 	const nextTag = currentVersionTag.next;
 	if (!nextTag) {
 		console.log("✨ No next version configured, skipping version updates");
 	} else {
+		// Check if this is a stable release
+		const isStableRelease = isStableTag(nextTag);
+
 		console.log(`📈 Updating to next version tag: ${nextTag}`);
 
 		const nextVersionTag = getVersionTagConfig(config, nextTag);
@@ -147,7 +147,6 @@ export async function endPrCommand(): Promise<void> {
 					}
 					const newConfig = {
 						...config,
-						tag: nextTag,
 						projects: config.projects.map((p) =>
 							p.path === project.path
 								? { ...p, baseVersion: newBaseVersion }
@@ -164,7 +163,7 @@ export async function endPrCommand(): Promise<void> {
 			await updateMultipleProjectVersions(projectsToUpdate, newVersions);
 
 			// Update branch info with the new versions for next tag
-			await updateBranchInfo(currentBranch, newVersions);
+			await updateBranchInfo(currentBranch, newVersions, nextTag);
 
 			// Generate commit message using package names
 			const versionEntries = [];
