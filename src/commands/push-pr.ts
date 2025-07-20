@@ -689,23 +689,16 @@ if (import.meta.vitest) {
 
 		it("should generate increment versions", () => {
 			// Test the getNextIncrementFromTags function directly
-			const existingTags = [
-				"1.0.0-alpha.0",
-				"1.0.0-alpha.1", 
-				"1.0.0-alpha.2",
-			];
-			
+			const existingTags = ["1.0.0-alpha.0", "1.0.0-alpha.1", "1.0.0-alpha.2"];
+
 			// Should return 0 for rc since no rc tags exist
 			expect(getNextIncrementFromTags(existingTags, "1.0.0", "rc")).toBe(0);
-			
+
 			// Should return 3 for alpha since alpha.0, alpha.1, alpha.2 exist
 			expect(getNextIncrementFromTags(existingTags, "1.0.0", "alpha")).toBe(3);
-			
+
 			// Test with library prefix
-			const libTags = [
-				"mylib-1.0.0-rc.0",
-				"mylib-1.0.0-rc.1",
-			];
+			const libTags = ["mylib-1.0.0-rc.0", "mylib-1.0.0-rc.1"];
 			expect(getNextIncrementFromTags(libTags, "1.0.0", "rc")).toBe(2);
 		});
 	});

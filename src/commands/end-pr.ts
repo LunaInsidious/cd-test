@@ -209,6 +209,10 @@ export async function endPrCommand(): Promise<void> {
 		}
 	}
 
+	// This is a workaround for GitHub Actions not picking up changes immediately
+	console.log("\n⏳ Waiting for changes to propagate...");
+	await new Promise((resolve) => setTimeout(resolve, 5000));
+
 	// Clean up branch info file
 	console.log("\n🧹 Cleaning up branch info file...");
 	await deleteBranchInfo(currentBranch);
@@ -513,18 +517,14 @@ if (import.meta.vitest) {
 
 		it("should generate increment versions", () => {
 			// Test the getNextIncrementFromTags function directly
-			const existingTags = [
-				"1.0.0-alpha.0",
-				"1.0.0-alpha.1",
-				"1.0.0-rc.0",
-			];
-			
+			const existingTags = ["1.0.0-alpha.0", "1.0.0-alpha.1", "1.0.0-rc.0"];
+
 			// Should return 1 for rc since rc.0 exists
 			expect(getNextIncrementFromTags(existingTags, "1.0.0", "rc")).toBe(1);
-			
+
 			// Should return 2 for alpha since alpha.0 and alpha.1 exist
 			expect(getNextIncrementFromTags(existingTags, "1.0.0", "alpha")).toBe(2);
-			
+
 			// Test empty tags
 			expect(getNextIncrementFromTags([], "2.0.0", "beta")).toBe(0);
 		});
