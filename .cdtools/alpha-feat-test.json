@@ -1,4 +1,5 @@
 {
-	"tag": "alpha",
-	"parentBranch": "feat/manual"
+  "tag": "alpha",
+  "parentBranch": "feat/manual",
+  "workspaceUpdated": {}
 }

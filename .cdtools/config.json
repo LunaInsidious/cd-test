@@ -1,5 +1,5 @@
 {
-	"versioningStrategy": "fixed",
+	"versioningStrategy": "independent",
 	"versionTags": [
 		{
 			"alpha": {
@@ -15,11 +15,11 @@
 	],
 	"projects": [
 		{
-			"path": "src",
+			"path": ".",
 			"type": "typescript",
 			"baseVersion": "1.0.0",
 			"bumpedVersions": [],
-			"deps": ["package.json"],
+			"deps": [],
 			"registries": ["npm"]
 		}
 	]

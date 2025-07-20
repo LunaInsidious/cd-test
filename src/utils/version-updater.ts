@@ -65,7 +65,7 @@ export async function updateProjectVersion(
 	newVersion: string,
 ): Promise<void> {
 	switch (project.type) {
-		case "npm":
+		case "typescript":
 			await updateNpmVersion(project.path, newVersion);
 			break;
 		case "rust":

@@ -1,3 +1,4 @@
+import path from "node:path";
 import prompts from "prompts";
 import {
 	type BranchInfo,
@@ -365,27 +366,30 @@ function determineProjectsToUpdate(
 	newVersions: Record<string, string>,
 ): string[] {
 	const projectsToUpdate = new Set<string>();
+	const changedFullPaths = changedFiles.map((filepath) =>
+		path.resolve(filepath),
+	);
 
 	// First pass: find directly affected projects
 	for (const project of config.projects) {
-		const projectPath = project.path;
+		const projectPath = path.resolve(project.path);
 
 		// Check if any of the project's dependency files were changed
 		const hasChangedDeps = project.deps.some((depPath) => {
-			const fullDepPath = `${projectPath}/${depPath}`;
-			return changedFiles.some(
-				(changedFile) =>
-					changedFile.startsWith(fullDepPath) || changedFile === fullDepPath,
+			// Deps are relative to the root directory
+			const fullDepPath = path.resolve(depPath);
+			return changedFullPaths.some((changedPath) =>
+				changedPath.startsWith(fullDepPath) || changedPath === fullDepPath,
 			);
 		});
 
 		// Also check if any files within the project directory were changed
-		const hasProjectChanges = changedFiles.some((changedFile) =>
-			changedFile.startsWith(`${projectPath}/`),
+		const hasProjectChanges = changedFullPaths.some((changedPath) =>
+			changedPath.startsWith(`${projectPath}/`),
 		);
 
 		if (hasChangedDeps || hasProjectChanges) {
-			projectsToUpdate.add(projectPath);
+			projectsToUpdate.add(project.path); // Keep original path format
 		}
 	}
 
@@ -505,7 +509,7 @@ if (import.meta.vitest) {
 				projects: [
 					{
 						path: "package-a",
-						deps: ["package.json"],
+						deps: ["package-a/package.json"],
 						type: "npm",
 						baseVersion: "1.0.0",
 						bumpedVersions: [],
@@ -513,7 +517,7 @@ if (import.meta.vitest) {
 					},
 					{
 						path: "package-b",
-						deps: ["package.json"],
+						deps: ["package-b/package.json"],
 						type: "npm",
 						baseVersion: "1.0.0",
 						bumpedVersions: [],
@@ -541,7 +545,7 @@ if (import.meta.vitest) {
 				projects: [
 					{
 						path: "package-a",
-						deps: ["package.json"],
+						deps: ["package-a/package.json"],
 						type: "npm",
 						baseVersion: "1.0.0",
 						bumpedVersions: [],
@@ -549,7 +553,7 @@ if (import.meta.vitest) {
 					},
 					{
 						path: "package-b",
-						deps: ["package.json"],
+						deps: ["package-b/package.json"],
 						type: "npm",
 						baseVersion: "1.0.0",
 						bumpedVersions: [],
@@ -577,7 +581,7 @@ if (import.meta.vitest) {
 				projects: [
 					{
 						path: "package-a",
-						deps: ["package.json", "Dockerfile"],
+						deps: ["package-a/package.json", "package-a/Dockerfile"],
 						type: "npm",
 						baseVersion: "1.0.0",
 						bumpedVersions: [],
@@ -604,7 +608,7 @@ if (import.meta.vitest) {
 				projects: [
 					{
 						path: "package-a",
-						deps: ["package.json"],
+						deps: ["package-a/package.json"],
 						type: "npm",
 						baseVersion: "1.0.0",
 						bumpedVersions: [],
@@ -612,7 +616,7 @@ if (import.meta.vitest) {
 					},
 					{
 						path: "package-b",
-						deps: ["package.json"],
+						deps: ["package-b/package.json"],
 						type: "npm",
 						baseVersion: "1.0.0",
 						bumpedVersions: [],
@@ -630,6 +634,108 @@ if (import.meta.vitest) {
 			);
 
 			expect(result).toHaveLength(0);
+		});
+
+		it("should handle relative paths correctly with path.resolve", () => {
+			const config = {
+				versioningStrategy: "independent" as const,
+				versionTags: [],
+				projects: [
+					{
+						path: "./packages/package-a",
+						deps: ["./packages/package-a/package.json", "./packages/package-a/src"],
+						type: "npm",
+						baseVersion: "1.0.0",
+						bumpedVersions: [],
+						registries: [],
+					},
+					{
+						path: "packages/package-b",
+						deps: ["packages/package-b/package.json"],
+						type: "npm",
+						baseVersion: "1.0.0",
+						bumpedVersions: [],
+						registries: [],
+					},
+				],
+			};
+			// Mix of relative and different formats
+			const changedFiles = ["./packages/package-a/src/index.ts", "packages/package-a/package.json"];
+			const newVersions = { "./packages/package-a": "1.0.1" };
+
+			const result = determineProjectsToUpdate(
+				config,
+				changedFiles,
+				newVersions,
+			);
+
+			expect(result).toContain("./packages/package-a");
+			expect(result).not.toContain("packages/package-b");
+		});
+
+		it("should detect dependency files with various path formats", () => {
+			const config = {
+				versioningStrategy: "independent" as const,
+				versionTags: [],
+				projects: [
+					{
+						path: "apps/frontend",
+						deps: ["apps/frontend/package.json", "shared/config.json", "apps/frontend/Dockerfile"],
+						type: "npm",
+						baseVersion: "1.0.0",
+						bumpedVersions: [],
+						registries: [],
+					},
+				],
+			};
+			// Test that shared/config.json change triggers update
+			const changedFiles = ["shared/config.json"];
+			const newVersions = { "apps/frontend": "1.0.1" };
+
+			const result = determineProjectsToUpdate(
+				config,
+				changedFiles,
+				newVersions,
+			);
+
+			expect(result).toContain("apps/frontend");
+		});
+
+		it("should handle exact file matches vs directory prefix matches", () => {
+			const config = {
+				versioningStrategy: "independent" as const,
+				versionTags: [],
+				projects: [
+					{
+						path: "packages/lib",
+						deps: ["packages/lib/package.json", "packages/lib/build.config.js"],
+						type: "npm",
+						baseVersion: "1.0.0",
+						bumpedVersions: [],
+						registries: [],
+					},
+					{
+						path: "packages/lib-utils",
+						deps: ["packages/lib-utils/package.json"],
+						type: "npm",
+						baseVersion: "1.0.0",
+						bumpedVersions: [],
+						registries: [],
+					},
+				],
+			};
+			// Change in packages/lib should not affect packages/lib-utils
+			const changedFiles = ["packages/lib/src/index.ts"];
+			const newVersions = { "packages/lib": "1.0.1" };
+
+			const result = determineProjectsToUpdate(
+				config,
+				changedFiles,
+				newVersions,
+			);
+
+			expect(result).toContain("packages/lib");
+			expect(result).not.toContain("packages/lib-utils");
 		});
 	});
 }
