@@ -337,6 +337,38 @@ async function generateVersionWithSuffix(
 }
 
 /**
+ * Extract increment numbers from existing tags
+ * @param existingTags - Array of existing git tags
+ * @param baseVersion - The base version to check
+ * @param tag - The tag name to check
+ * @returns Next increment number
+ */
+export function getNextIncrementFromTags(
+	existingTags: string[],
+	baseVersion: string,
+	tag: string,
+): number {
+	// Create regex pattern to match version tags with increment numbers
+	// Supports both formats: "1.0.0-alpha.0" and "library-name-1.0.0-alpha.0"
+	const escapedBaseVersion = escapeRegexMetaCharacters(baseVersion);
+	const escapedTag = escapeRegexMetaCharacters(tag);
+	const incrementRegex = new RegExp(
+		`^(?:.*-)?${escapedBaseVersion}-${escapedTag}\\.(\\d+)$`,
+	);
+
+	// Extract increment numbers from matching tags
+	const increments = existingTags
+		.map((tagName) => {
+			const match = tagName.match(incrementRegex);
+			return match?.[1] ? parseInt(match[1], 10) : -1;
+		})
+		.filter((num) => num >= 0);
+
+	// Return next increment (highest + 1, or 0 if none exist)
+	return increments.length > 0 ? Math.max(...increments) + 1 : 0;
+}
+
+/**
  * Get the next increment number for a given base version and tag
  * Checks existing git tags to find the highest increment and returns next
  * @param baseVersion - The base version to check (e.g., "1.0.0")
@@ -351,25 +383,7 @@ async function getNextIncrement(
 		// Look for tags like "1.0.0-alpha.0", "1.0.0-alpha.1", "lib-1.0.0-alpha.0", etc.
 		const tagPattern = `*${baseVersion}-${tag}.*`;
 		const existingTags = await getTagsMatchingPattern(tagPattern);
-
-		// Create regex pattern to match version tags with increment numbers
-		// Supports both formats: "1.0.0-alpha.0" and "library-name-1.0.0-alpha.0"
-		const escapedBaseVersion = escapeRegexMetaCharacters(baseVersion);
-		const escapedTag = escapeRegexMetaCharacters(tag);
-		const incrementRegex = new RegExp(
-			`^(?:.*-)?${escapedBaseVersion}-${escapedTag}\\.(\\d+)$`,
-		);
-
-		// Extract increment numbers from matching tags
-		const increments = existingTags
-			.map((tagName) => {
-				const match = tagName.match(incrementRegex);
-				return match?.[1] ? parseInt(match[1], 10) : -1;
-			})
-			.filter((num) => num >= 0);
-
-		// Return next increment (highest + 1, or 0 if none exist)
-		return increments.length > 0 ? Math.max(...increments) + 1 : 0;
+		return getNextIncrementFromTags(existingTags, baseVersion, tag);
 	} catch (error) {
 		// If git tag lookup fails, default to 0
 		console.warn(
@@ -497,26 +511,22 @@ if (import.meta.vitest) {
 			expect(result).toMatch(/^1\.0\.0-rc\.\d{14}$/);
 		});
 
-		it("should generate increment versions", async () => {
-			vi.mock("../utils/git.js", (importOriginal) => {
-				const original = importOriginal();
-				return {
-					...original,
-					getTagsMatchingPattern: vi
-						.fn()
-						.mockResolvedValue([
-							"1.0.0-alpha.0",
-							"1.0.0-alpha.1",
-							"1.0.0-rc.0",
-						]),
-				};
-			});
-			const result = await generateVersionWithSuffix(
-				"1.0.0",
-				"rc",
-				"increment",
-			);
-			expect(result).toBe("1.0.0-rc.1");
+		it("should generate increment versions", () => {
+			// Test the getNextIncrementFromTags function directly
+			const existingTags = [
+				"1.0.0-alpha.0",
+				"1.0.0-alpha.1",
+				"1.0.0-rc.0",
+			];
+			
+			// Should return 1 for rc since rc.0 exists
+			expect(getNextIncrementFromTags(existingTags, "1.0.0", "rc")).toBe(1);
+			
+			// Should return 2 for alpha since alpha.0 and alpha.1 exist
+			expect(getNextIncrementFromTags(existingTags, "1.0.0", "alpha")).toBe(2);
+			
+			// Test empty tags
+			expect(getNextIncrementFromTags([], "2.0.0", "beta")).toBe(0);
 		});
 	});
 }
