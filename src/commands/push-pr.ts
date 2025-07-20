@@ -599,7 +599,7 @@ async function getNextIncrement(
 		const escapedBaseVersion = escapeRegexMetaCharacters(baseVersion);
 		const escapedTag = escapeRegexMetaCharacters(tag);
 		const incrementRegex = new RegExp(
-			`^(?:.*-)?${escapedBaseVersion}-${escapedTag}\\.(\\d+)$`,
+			`^(?:.*-)?v?${escapedBaseVersion}-${escapedTag}\\.(\\d+)$`,
 		);
 
 		// Extract increment numbers from matching tags
