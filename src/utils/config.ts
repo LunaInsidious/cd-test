@@ -138,11 +138,12 @@ export async function loadBranchInfo(
 }
 
 /**
- * Update branch info file with workspace updates
+ * Update branch info file with workspace updates and optionally tag
  */
 export async function updateBranchInfo(
 	currentBranch: string,
 	workspaceUpdated: Record<string, string>,
+	tag?: string,
 ): Promise<void> {
 	const branchInfo = await loadBranchInfo(currentBranch);
 	if (!branchInfo) {
@@ -153,6 +154,7 @@ export async function updateBranchInfo(
 	const updatedBranchInfo: BranchInfo = {
 		...branchInfo,
 		workspaceUpdated,
+		...(tag && { tag }),
 	};
 
 	const parsed = parseBranchName(currentBranch);
