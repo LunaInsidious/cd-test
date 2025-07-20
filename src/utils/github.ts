@@ -60,8 +60,7 @@ export async function checkPrExists(): Promise<boolean> {
 			"--json",
 			"url",
 		]);
-		const status = JSON.parse(result);
-		return status.currentBranch !== null;
+		return result !== ""; // If result is empty, no PR exists
 	} catch (_) {
 		// If command fails, assume no PR exists
 		return false;
