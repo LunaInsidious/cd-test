@@ -5,6 +5,9 @@ import {
 	type BumpType,
 	type Config,
 	checkInitialized,
+	compareVersions,
+	getVersionTagConfig,
+	isStableTag,
 	loadBranchInfo,
 	loadConfig,
 	updateBranchInfo,
@@ -271,22 +274,44 @@ async function calculateNewVersions(
 			continue; // Project was skipped
 		}
 
-		// Check if this bump type or smaller has already been released
-		const hasBeenReleased = hasVersionBumpBeenReleased(
-			project.bumpedVersions,
-			selectedBump,
-		);
+		// Check if this bump type or smaller has already been released for this specific project
+		const currentProjectVersion = branchInfo.workspaceUpdated?.[project.path];
+		let projectBumpType: BumpType | null = null;
+		if (currentProjectVersion) {
+			projectBumpType = compareVersions(
+				project.baseVersion,
+				currentProjectVersion,
+			);
+		}
+
+		const hasBeenReleased = projectBumpType
+			? hasVersionBumpBeenReleased([projectBumpType], selectedBump)
+			: false;
 
 		let newVersion: string;
-		if (hasBeenReleased) {
-			// No base version change needed, just update suffix
+
+		if (hasBeenReleased && currentProjectVersion) {
+			// Use the existing workspaceUpdated version, just update suffix
+			const existingVersionBase = currentProjectVersion.split("-")[0];
+			if (!existingVersionBase) {
+				throw new Error(
+					`Invalid version format in workspaceUpdated: ${currentProjectVersion}`,
+				);
+			}
+			newVersion = await generateVersionWithSuffix(
+				existingVersionBase,
+				branchInfo.tag,
+				currentVersionTag.versionSuffixStrategy,
+			);
+		} else if (hasBeenReleased) {
+			// No workspace version but bump already released, use base version
 			newVersion = await generateVersionWithSuffix(
 				project.baseVersion,
 				branchInfo.tag,
 				currentVersionTag.versionSuffixStrategy,
 			);
 		} else {
-			// Calculate new base version and add to bumpedVersions
+			// Apply bump and generate new version
 			const newBaseVersion = bumpVersion(project.baseVersion, selectedBump);
 			newVersion = await generateVersionWithSuffix(
 				newBaseVersion,
@@ -635,7 +660,6 @@ if (import.meta.vitest) {
 						deps: ["package-a/package.json"],
 						type: "npm",
 						baseVersion: "1.0.0",
-						bumpedVersions: [],
 						registries: [],
 					},
 					{
@@ -643,7 +667,6 @@ if (import.meta.vitest) {
 						deps: ["package-b/package.json"],
 						type: "npm",
 						baseVersion: "1.0.0",
-						bumpedVersions: [],
 						registries: [],
 					},
 				],
@@ -671,7 +694,6 @@ if (import.meta.vitest) {
 						deps: ["package-a/package.json"],
 						type: "npm",
 						baseVersion: "1.0.0",
-						bumpedVersions: [],
 						registries: [],
 					},
 					{
@@ -679,7 +701,6 @@ if (import.meta.vitest) {
 						deps: ["package-b/package.json"],
 						type: "npm",
 						baseVersion: "1.0.0",
-						bumpedVersions: [],
 						registries: [],
 					},
 				],
@@ -707,7 +728,6 @@ if (import.meta.vitest) {
 						deps: ["package-a/package.json", "package-a/Dockerfile"],
 						type: "npm",
 						baseVersion: "1.0.0",
-						bumpedVersions: [],
 						registries: [],
 					},
 				],
@@ -734,7 +754,6 @@ if (import.meta.vitest) {
 						deps: ["package-a/package.json"],
 						type: "npm",
 						baseVersion: "1.0.0",
-						bumpedVersions: [],
 						registries: [],
 					},
 					{
@@ -742,7 +761,6 @@ if (import.meta.vitest) {
 						deps: ["package-b/package.json"],
 						type: "npm",
 						baseVersion: "1.0.0",
-						bumpedVersions: [],
 						registries: [],
 					},
 				],
@@ -772,7 +790,6 @@ if (import.meta.vitest) {
 						],
 						type: "npm",
 						baseVersion: "1.0.0",
-						bumpedVersions: [],
 						registries: [],
 					},
 					{
@@ -780,7 +797,6 @@ if (import.meta.vitest) {
 						deps: ["packages/package-b/package.json"],
 						type: "npm",
 						baseVersion: "1.0.0",
-						bumpedVersions: [],
 						registries: [],
 					},
 				],
@@ -816,7 +832,6 @@ if (import.meta.vitest) {
 						],
 						type: "npm",
 						baseVersion: "1.0.0",
-						bumpedVersions: [],
 						registries: [],
 					},
 				],
@@ -844,7 +859,6 @@ if (import.meta.vitest) {
 						deps: ["packages/lib/package.json", "packages/lib/build.config.js"],
 						type: "npm",
 						baseVersion: "1.0.0",
-						bumpedVersions: [],
 						registries: [],
 					},
 					{
@@ -852,7 +866,6 @@ if (import.meta.vitest) {
 						deps: ["packages/lib-utils/package.json"],
 						type: "npm",
 						baseVersion: "1.0.0",
-						bumpedVersions: [],
 						registries: [],
 					},
 				],

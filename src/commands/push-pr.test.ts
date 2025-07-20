@@ -21,12 +21,19 @@ vi.mock("prompts", () => ({
 	default: vi.fn(),
 }));
 
-vi.mock("../utils/config.js", () => ({
-	checkInitialized: vi.fn(),
-	loadConfig: vi.fn(),
-	loadBranchInfo: vi.fn(),
-	updateBranchInfo: vi.fn(),
-}));
+vi.mock("../utils/config.js", async (importOriginal) => {
+	const actual = await importOriginal();
+	if (typeof actual !== "object" || actual === null) {
+		throw new Error("Expected a module object");
+	}
+	return {
+		...actual,
+		checkInitialized: vi.fn(),
+		loadConfig: vi.fn(),
+		loadBranchInfo: vi.fn(),
+		updateBranchInfo: vi.fn(),
+	};
+});
 
 vi.mock("../utils/git.js", () => ({
 	getCurrentBranch: vi.fn(),
@@ -109,15 +116,13 @@ const mockConfig: Config = {
 			path: "package-a",
 			type: "npm",
 			baseVersion: "1.0.0",
-			bumpedVersions: [],
 			deps: ["package.json"],
 			registries: ["npm"],
 		},
 		{
 			path: "package-b",
 			type: "npm",
-			baseVersion: "2.1.0",
-			bumpedVersions: ["patch"],
+			baseVersion: "2.0.0",
 			deps: ["package.json"],
 			registries: ["npm"],
 		},
@@ -237,10 +242,74 @@ describe("pushPrCommand", () => {
 				"  • package-a: 1.0.1-alpha.20231225103045",
 			);
 			expect(consoleLogSpy).toHaveBeenCalledWith(
-				"  • package-b: 2.1.0-alpha.20231225103045",
+				"  • package-b: 2.0.1-alpha.20231225103045",
 			);
 			expect(consoleLogSpy).toHaveBeenCalledWith(
 				"✅ Push PR completed successfully!",
+			);
+
+			consoleLogSpy.mockRestore();
+		});
+
+		it("should handle existing workspaceUpdated with minor bump", async () => {
+			// Mock branch info with existing workspace updates
+			const branchInfoWithWorkspace = {
+				tag: "alpha",
+				parentBranch: "main",
+				workspaceUpdated: {
+					"package-a": "1.0.1-alpha.20231224103045", // patch already released (1.0.0 -> 1.0.1)
+					"package-b": "2.1.0-alpha.20231224103045", // minor already released (2.0.0 -> 2.1.0)
+				},
+			};
+			mockLoadBranchInfo.mockResolvedValue(branchInfoWithWorkspace);
+
+			mockConsoleLog.mockRestore();
+			const consoleLogSpy = vi.spyOn(console, "log");
+			mockPrompts.mockResolvedValueOnce({ bumpType: "minor" });
+
+			const mockDate = new Date("2023-12-25T10:30:45.123Z");
+			vi.setSystemTime(mockDate);
+
+			await pushPrCommand();
+
+			// package-a: can do minor (1.0.0 -> 1.1.0) because only patch was released
+			// package-b: stays 2.1.0 because minor was already released
+			expect(consoleLogSpy).toHaveBeenCalledWith(
+				"  • package-a: 1.1.0-alpha.20231225103045",
+			);
+			expect(consoleLogSpy).toHaveBeenCalledWith(
+				"  • package-b: 2.1.0-alpha.20231225103045",
+			);
+
+			consoleLogSpy.mockRestore();
+		});
+
+		it("should handle same bump type already released", async () => {
+			const branchInfoWithUpdates = {
+				tag: "alpha",
+				parentBranch: "main",
+				workspaceUpdated: {
+					"package-a": "1.0.1-alpha.20231224103045", // patch already released
+					"package-b": "2.1.0-alpha.20231224103045", // minor already released
+				},
+			};
+			mockLoadBranchInfo.mockResolvedValue(branchInfoWithUpdates);
+
+			mockConsoleLog.mockRestore();
+			const consoleLogSpy = vi.spyOn(console, "log");
+			mockPrompts.mockResolvedValueOnce({ bumpType: "patch" });
+
+			const mockDate = new Date("2023-12-25T10:30:45.123Z");
+			vi.setSystemTime(mockDate);
+
+			await pushPrCommand();
+
+			// Both keep workspaceUpdated versions because patch/minor already released
+			expect(consoleLogSpy).toHaveBeenCalledWith(
+				"  • package-a: 1.0.1-alpha.20231225103045",
+			);
+			expect(consoleLogSpy).toHaveBeenCalledWith(
+				"  • package-b: 2.1.0-alpha.20231225103045",
 			);
 
 			consoleLogSpy.mockRestore();

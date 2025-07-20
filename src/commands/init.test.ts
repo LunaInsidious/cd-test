@@ -56,7 +56,7 @@ describe("initCommand", () => {
 			);
 			expect(mockCopyFile).toHaveBeenCalledWith(
 				expect.stringContaining("default-files/publish-npm.yml"),
-				".cdtools/publish-npm.yml",
+				".github/workflows/publish-npm.yml",
 			);
 			expect(consoleSpy).toHaveBeenCalledWith(
 				"🎉 CD tools initialization complete!",
@@ -71,7 +71,7 @@ describe("initCommand", () => {
 
 			expect(mockCopyFile).toHaveBeenCalledWith(
 				expect.stringContaining("default-files/publish-container-image.yml"),
-				".cdtools/publish-container-image.yml",
+				".github/workflows/publish-container-image.yml",
 			);
 		});
 
@@ -83,11 +83,11 @@ describe("initCommand", () => {
 
 			expect(mockCopyFile).toHaveBeenCalledWith(
 				expect.stringContaining("default-files/publish-npm.yml"),
-				".cdtools/publish-npm.yml",
+				".github/workflows/publish-npm.yml",
 			);
 			expect(mockCopyFile).toHaveBeenCalledWith(
 				expect.stringContaining("default-files/publish-container-image.yml"),
-				".cdtools/publish-container-image.yml",
+				".github/workflows/publish-container-image.yml",
 			);
 		});
 	});

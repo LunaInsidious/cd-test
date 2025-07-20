@@ -19,7 +19,6 @@ export interface Project {
 	path: string;
 	type: string;
 	baseVersion: string;
-	bumpedVersions: BumpType[];
 	deps: string[];
 	registries: Registry[];
 }
@@ -183,14 +182,155 @@ export function getAvailableVersionTags(
 	config: Config,
 ): Array<{ title: string; value: string }> {
 	const tags: Array<{ title: string; value: string }> = [];
+	const addedTags = new Set<string>();
 
+	// Add configured version tags
 	for (const versionTag of config.versionTags) {
 		for (const tagName of Object.keys(versionTag)) {
-			tags.push({ title: tagName, value: tagName });
+			if (!addedTags.has(tagName)) {
+				tags.push({ title: tagName, value: tagName });
+				addedTags.add(tagName);
+			}
 		}
 	}
 
+	// Add stable tag (reserved word, always available)
+	if (!addedTags.has("stable")) {
+		tags.push({ title: "stable", value: "stable" });
+		addedTags.add("stable");
+	}
+
 	return tags;
+}
+
+/**
+ * Check if a tag is a stable tag (not directly defined in versionTags but referenced by 'next')
+ */
+export function isStableTag(config: Config, tagName: string): boolean {
+	// "stable" is a reserved word and always considered a stable tag
+	if (tagName === "stable") {
+		return true;
+	}
+
+	// Check if tag is directly defined in versionTags
+	for (const versionTag of config.versionTags) {
+		if (tagName in versionTag) {
+			return false;
+		}
+	}
+
+	// Check if tag is referenced by any 'next' field
+	for (const versionTag of config.versionTags) {
+		for (const tagConfig of Object.values(versionTag)) {
+			if (tagConfig.next === tagName) {
+				return true;
+			}
+		}
+	}
+
+	return false;
+}
+
+/**
+ * Get the version tag configuration for a given tag name
+ * For stable tags, returns a default configuration
+ */
+export function getVersionTagConfig(
+	config: Config,
+	tagName: string,
+): { versionSuffixStrategy: "timestamp" | "increment"; next?: string } | null {
+	// Check if tag is directly defined in versionTags
+	for (const versionTag of config.versionTags) {
+		if (tagName in versionTag) {
+			return versionTag[tagName] ? versionTag[tagName] : null;
+		}
+	}
+
+	// For stable tags, return a default configuration (no suffix strategy needed)
+	if (isStableTag(config, tagName)) {
+		return { versionSuffixStrategy: "increment" }; // Default, but won't be used for stable releases
+	}
+
+	return null;
+}
+
+/**
+ * Compare two semantic versions to determine bump type
+ * @param baseVersion - The base version (e.g., "1.0.0")
+ * @param currentVersion - The current version (e.g., "1.1.0-alpha.1")
+ * @returns The bump type or null if no change
+ */
+export function compareVersions(
+	baseVersion: string,
+	currentVersion: string,
+): BumpType | null {
+	// Extract base part from current version (remove pre-release suffix)
+	const currentBasePart = currentVersion.split("-")[0];
+	if (!currentBasePart) {
+		return null;
+	}
+
+	const baseParts = baseVersion.split(".").map(Number);
+	const currentParts = currentBasePart.split(".").map(Number);
+
+	if (baseParts.length !== 3 || currentParts.length !== 3) {
+		return null;
+	}
+
+	const [baseMajor, baseMinor, basePatch] = baseParts;
+	const [currentMajor, currentMinor, currentPatch] = currentParts;
+
+	if (
+		baseMajor === undefined ||
+		baseMinor === undefined ||
+		basePatch === undefined ||
+		currentMajor === undefined ||
+		currentMinor === undefined ||
+		currentPatch === undefined
+	) {
+		return null;
+	}
+
+	if (currentMajor > baseMajor) {
+		return "major";
+	}
+	if (currentMinor > baseMinor) {
+		return "minor";
+	}
+	if (currentPatch > basePatch) {
+		return "patch";
+	}
+
+	return null; // No change
+}
+
+/**
+ * Get the bump types that have occurred in this release cycle
+ * @param config - The configuration
+ * @param workspaceUpdated - The workspace updates from branch info
+ * @returns Array of bump types that have occurred
+ */
+export function getBumpTypesFromWorkspaceUpdated(
+	config: Config,
+	workspaceUpdated: Record<string, string>,
+): BumpType[] {
+	const bumpTypes = new Set<BumpType>();
+
+	for (const [projectPath, currentVersion] of Object.entries(
+		workspaceUpdated,
+	)) {
+		const project = config.projects.find((p) => p.path === projectPath);
+		if (!project) {
+			continue;
+		}
+
+		const bumpType = compareVersions(project.baseVersion, currentVersion);
+		if (bumpType) {
+			bumpTypes.add(bumpType);
+		}
+	}
+
+	return Array.from(bumpTypes);
 }
 
 /**

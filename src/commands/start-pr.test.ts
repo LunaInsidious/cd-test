@@ -149,6 +149,30 @@ describe("startPrCommand", () => {
 			);
 		});
 
+		it("should handle stable release mode", async () => {
+			// Update mock to return stable tag as well
+			mockGetAvailableVersionTags.mockReturnValue([
+				{ title: "alpha", value: "alpha" },
+				{ title: "rc", value: "rc" },
+				{ title: "stable", value: "stable" },
+			]);
+
+			mockPrompts
+				.mockResolvedValueOnce({ releaseMode: "stable" })
+				.mockResolvedValueOnce({ branchName: "release/v2.0.0" });
+
+			await startPrCommand();
+
+			expect(mockCreateAndCheckoutBranch).toHaveBeenCalledWith(
+				"release/v2.0.0(stable)",
+			);
+			expect(mockCreateBranchInfo).toHaveBeenCalledWith(
+				"stable",
+				"release/v2.0.0",
+				"main",
+			);
+		});
+
 		it("should validate branch name during input", async () => {
 			mockPrompts
 				.mockResolvedValueOnce({ releaseMode: "rc" })

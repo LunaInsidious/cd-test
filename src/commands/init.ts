@@ -88,11 +88,11 @@ export async function initCommand(): Promise<void> {
 			switch (registry) {
 				case "npm":
 					sourceFile = join(defaultFilesDir, "publish-npm.yml");
-					targetFile = ".cdtools/publish-npm.yml";
+					targetFile = ".github/workflows/publish-npm.yml";
 					break;
 				case "docker":
 					sourceFile = join(defaultFilesDir, "publish-container-image.yml");
-					targetFile = ".cdtools/publish-container-image.yml";
+					targetFile = ".github/workflows/publish-container-image.yml";
 					break;
 				default:
 					console.warn(`⚠️  Unknown registry: ${registry}`);

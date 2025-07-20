@@ -4,6 +4,7 @@
 - cd-toolsは現状npmとdockerのみ対応とするが、後々rust(crates.io)などにも対応する予定のため、npm依存の箇所などは適切に関数に切り出すこと(バージョンアップ時のpackage.jsonの更新なども同様)
 - conventional commitsの解析は今回はスコープ外
 - jsdocやコメントも適切に記載すること
+- stable tagは予約語で、正式リリース(2.0.0など。2.0.0-rc.0のようにタグ名がつかない。)
 
 TODOリスト
 - フェーズ1
@@ -48,5 +49,11 @@ TODOリスト
     - [x] ブランチ情報ファイルを削除し、そのcommitをpushする(最後の後片付け)
     - [x] `gh pr merge --squash "$pr_url$`を実行し、マージ
 - フェーズ5
-  - [ ] stableリリースの場合、`bumpedVersions`をクリアする(理由は`/docs/answer.md`を参照branchInfo.workspaceUpdated = workspaceUpdated;)
-  - [ ] `/default-files/publish-npm.yml`,`/default-files/publish-container-image.yml`について、TODOとして記載しているように、ブランチ情報ファイルの`workspaceUpdated`に基づいて並列で各ワークスペースのリリースができるようにする。
+  - [ ] start-prでstable tagが選べるようにする。
+  - [ ] push-pr,end-prの際に、stableリリースのハンドリングを追加する
+  - [ ] push-pr,end-prの際に、もしstableリリースであれば`/.cd-tools/config.json`のstableリリースするprojectのbaseVersionを更新する
+  - [ ] push-prの際に、もしstableリリースであればブランチ情報ファイルのworkspaceUpdatedを削除する
+  - [ ] `/default-files/publish-npm.yml`,`/default-files/publish-container-image.yml`について、ymlにTODOとして記載しているように、ブランチ情報ファイルの`workspaceUpdated`に基づいて並列で各ワークスペースのリリースができるようにする。
+- フェーズ6(リファクタ)
+  - [ ] letを使っている箇所は関数切り出しでなくせるので、letを0にする
+  - [ ] start-prなどでもinsource testingをする
