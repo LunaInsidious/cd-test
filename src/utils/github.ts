@@ -93,7 +93,7 @@ async function createPullRequest(
 		return result; // Returns PR URL
 	} catch (error) {
 		throw new GitHubError(
-			`Failed to create pull request: ${error instanceof Error ? error.message : String(error)}`,
+			`Failed to create pull request: ${error instanceof Error ? error.message : String(error)}\nRun \`gh auth status\` to check if you are logged in to your account.`,
 			`gh pr create --title "${title}" --body "${body}" --base ${baseBranch}`,
 		);
 	}
