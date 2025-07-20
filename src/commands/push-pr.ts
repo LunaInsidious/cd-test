@@ -106,7 +106,6 @@ export async function pushPrCommand(): Promise<void> {
 	);
 
 	console.log("\n📂 Projects to update:");
-	console.log(projectsToUpdate.length, projectsToUpdate);
 	for (const projectPath of projectsToUpdate) {
 		const newVersion = newVersions[projectPath];
 		if (newVersion) {

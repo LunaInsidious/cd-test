@@ -22,7 +22,7 @@ export async function updateNpmVersion(
 
 		await writeFile(
 			packageJsonPath,
-			`${JSON.stringify(packageJson, null, 2)}\n`,
+			`${JSON.stringify(packageJson, null, "\t")}\n`,
 		);
 	} catch (error) {
 		throw new Error(
