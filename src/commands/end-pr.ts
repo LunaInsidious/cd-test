@@ -7,7 +7,6 @@ import {
 	isStableTag,
 	loadBranchInfo,
 	loadConfig,
-	updateConfig,
 } from "../utils/config.js";
 import {
 	commitChanges,
@@ -22,10 +21,6 @@ import {
 	getCurrentPrUrl,
 	mergePullRequest,
 } from "../utils/github.js";
-import {
-	getPackageName,
-	updateMultipleProjectVersions,
-} from "../utils/version-updater.js";
 
 /**
  * Finalize and merge PR
@@ -98,116 +93,116 @@ export async function endPrCommand(): Promise<void> {
 		);
 	}
 
-	// Check if this is a stable release
-	const isStableRelease = isStableTag(config, branchInfo.tag);
+	// // Check if this is a stable release
+	// const isStableRelease = isStableTag(config, branchInfo.tag);
 
-	if (isStableRelease) {
-		// For stable releases, update baseVersion in config.json with current workspaceUpdated
-		if (
-			branchInfo.workspaceUpdated &&
-			Object.keys(branchInfo.workspaceUpdated).length > 0
-		) {
-			console.log("📝 Updating baseVersion for stable release...");
+	// if (isStableRelease) {
+	// 	// For stable releases, update baseVersion in config.json with current workspaceUpdated
+	// 	if (
+	// 		branchInfo.workspaceUpdated &&
+	// 		Object.keys(branchInfo.workspaceUpdated).length > 0
+	// 	) {
+	// 		console.log("📝 Updating baseVersion for stable release...");
 
-			// Update project baseVersions to the released stable versions
-			const updatedConfig = { ...config };
-			for (const project of updatedConfig.projects) {
-				const stableVersion = branchInfo.workspaceUpdated[project.path];
-				if (stableVersion) {
-					project.baseVersion = stableVersion;
-				}
-			}
+	// 		// Update project baseVersions to the released stable versions
+	// 		const updatedConfig = { ...config };
+	// 		for (const project of updatedConfig.projects) {
+	// 			const stableVersion = branchInfo.workspaceUpdated[project.path];
+	// 			if (stableVersion) {
+	// 				project.baseVersion = stableVersion;
+	// 			}
+	// 		}
 
-			// Save updated config
-			await updateConfig(updatedConfig);
+	// 		// Save updated config
+	// 		await updateConfig(updatedConfig);
 
-			console.log("\n📋 Updated baseVersions:");
-			for (const [projectPath, version] of Object.entries(
-				branchInfo.workspaceUpdated,
-			)) {
-				console.log(`  • ${projectPath}: ${version}`);
-			}
+	// 		console.log("\n📋 Updated baseVersions:");
+	// 		for (const [projectPath, version] of Object.entries(
+	// 			branchInfo.workspaceUpdated,
+	// 		)) {
+	// 			console.log(`  • ${projectPath}: ${version}`);
+	// 		}
 
-			// Commit config changes using package names
-			const versionEntries = [];
-			for (const [path, version] of Object.entries(
-				branchInfo.workspaceUpdated,
-			)) {
-				try {
-					const packageName = await getPackageName(path);
-					versionEntries.push(`${packageName}(${version})`);
-				} catch {
-					// Fallback to path if package name is not available
-					versionEntries.push(`${path}(${version})`);
-				}
-			}
-			const commitMessage = `update baseVersion for stable release: ${versionEntries.join(", ")}`;
+	// 		// Commit config changes using package names
+	// 		const versionEntries = [];
+	// 		for (const [path, version] of Object.entries(
+	// 			branchInfo.workspaceUpdated,
+	// 		)) {
+	// 			try {
+	// 				const packageName = await getPackageName(path);
+	// 				versionEntries.push(`${packageName}(${version})`);
+	// 			} catch {
+	// 				// Fallback to path if package name is not available
+	// 				versionEntries.push(`${path}(${version})`);
+	// 			}
+	// 		}
+	// 		const commitMessage = `update baseVersion for stable release: ${versionEntries.join(", ")}`;
 
-			console.log(`\n📝 Committing baseVersion updates: ${commitMessage}`);
-			await commitChanges(commitMessage);
+	// 		console.log(`\n📝 Committing baseVersion updates: ${commitMessage}`);
+	// 		await commitChanges(commitMessage);
 
-			console.log("📤 Pushing baseVersion updates...");
-			await pushChanges(currentBranch);
-		}
-	}
+	// 		console.log("📤 Pushing baseVersion updates...");
+	// 		await pushChanges(currentBranch);
+	// 	}
+	// }
 
-	// Get the next version tag configuration
-	const nextTag = currentVersionTag.next;
-	if (!nextTag) {
-		console.log("✨ No next version configured, skipping version updates");
-	} else {
-		console.log(`📈 Updating to next version tag: ${nextTag}`);
+	// // Get the next version tag configuration
+	// const nextTag = currentVersionTag.next;
+	// if (!nextTag) {
+	// 	console.log("✨ No next version configured, skipping version updates");
+	// } else {
+	// 	console.log(`📈 Updating to next version tag: ${nextTag}`);
 
-		const nextVersionTag = getVersionTagConfig(config, nextTag);
-		if (!nextVersionTag) {
-			throw new Error(
-				`Next version tag '${nextTag}' not found in configuration`,
-			);
-		}
+	// 	const nextVersionTag = getVersionTagConfig(config, nextTag);
+	// 	if (!nextVersionTag) {
+	// 		throw new Error(
+	// 			`Next version tag '${nextTag}' not found in configuration`,
+	// 		);
+	// 	}
 
-		// Calculate new versions for next tag
-		const newVersions = await calculateNextVersions(
-			config,
-			branchInfo,
-			nextTag,
-			nextVersionTag.versionSuffixStrategy,
-		);
+	// 	// Calculate new versions for next tag
+	// 	const newVersions = await calculateNextVersions(
+	// 		config,
+	// 		branchInfo,
+	// 		nextTag,
+	// 		nextVersionTag.versionSuffixStrategy,
+	// 	);
 
-		if (Object.keys(newVersions).length > 0) {
-			console.log("\n📋 Next version updates:");
-			for (const [projectPath, version] of Object.entries(newVersions)) {
-				const packageName = await getPackageName(projectPath);
-				console.log(`  • ${packageName}: ${version}`);
-			}
+	// 	if (Object.keys(newVersions).length > 0) {
+	// 		console.log("\n📋 Next version updates:");
+	// 		for (const [projectPath, version] of Object.entries(newVersions)) {
+	// 			const packageName = await getPackageName(projectPath);
+	// 			console.log(`  • ${packageName}: ${version}`);
+	// 		}
 
-			// Update version files
-			console.log("\n📝 Updating version files for next release...");
-			const projectsToUpdate = config.projects.filter(
-				(p) => newVersions[p.path] !== undefined,
-			);
+	// 		// Update version files
+	// 		console.log("\n📝 Updating version files for next release...");
+	// 		const projectsToUpdate = config.projects.filter(
+	// 			(p) => newVersions[p.path] !== undefined,
+	// 		);
 
-			await updateMultipleProjectVersions(projectsToUpdate, newVersions);
+	// 		await updateMultipleProjectVersions(projectsToUpdate, newVersions);
 
-			// Generate commit message using package names
-			const versionEntries = [];
-			for (const [path, version] of Object.entries(newVersions)) {
-				try {
-					const packageName = await getPackageName(path);
-					versionEntries.push(`${packageName}(${version})`);
-				} catch {
-					// Fallback to path if package name is not available
-					versionEntries.push(`${path}(${version})`);
-				}
-			}
-			const commitMessage = `prepare next release: ${versionEntries.join(", ")}`;
+	// 		// Generate commit message using package names
+	// 		const versionEntries = [];
+	// 		for (const [path, version] of Object.entries(newVersions)) {
+	// 			try {
+	// 				const packageName = await getPackageName(path);
+	// 				versionEntries.push(`${packageName}(${version})`);
+	// 			} catch {
+	// 				// Fallback to path if package name is not available
+	// 				versionEntries.push(`${path}(${version})`);
+	// 			}
+	// 		}
+	// 		const commitMessage = `prepare next release: ${versionEntries.join(", ")}`;
 
-			console.log(`\n📝 Committing next version changes: ${commitMessage}`);
-			await commitChanges(commitMessage);
+	// 		console.log(`\n📝 Committing next version changes: ${commitMessage}`);
+	// 		await commitChanges(commitMessage);
 
-			console.log("📤 Pushing next version changes...");
-			await pushChanges(currentBranch);
-		}
-	}
+	// 		console.log("📤 Pushing next version changes...");
+	// 		await pushChanges(currentBranch);
+	// 	}
+	// }
 
 	// Clean up branch info file
 	console.log("\n🧹 Cleaning up branch info file...");
