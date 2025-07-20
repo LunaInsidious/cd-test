@@ -1,6 +1,6 @@
 {
 	"name": "cd-tools",
-	"version": "1.0.1-alpha.20250720083630",
+	"version": "1.0.1-alpha.20250720083810",
 	"bin": {
 		"cd-tools": "dist/index.js"
 	},

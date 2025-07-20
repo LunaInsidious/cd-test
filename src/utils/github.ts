@@ -178,9 +178,18 @@ export async function createPullRequestInteractive(
  */
 export async function getCurrentPrUrl(): Promise<string | null> {
 	try {
-		const result = await execGh(["pr", "status", "--json", "currentBranch"]);
-		const status = JSON.parse(result);
-		return status.currentBranch?.url || null;
+		const result = await execGh([
+			"pr",
+			"status",
+			"--jq",
+			".currentBranch.url",
+			"--json",
+			"url",
+		]);
+		if (result !== "") {
+			return result; // Returns PR URL if exists
+		}
+		return null; // No PR exists for current branch
 	} catch (_error) {
 		return null;
 	}
