@@ -77,15 +77,17 @@ export async function pushPrCommand(): Promise<void> {
 		console.log("❌ Operation cancelled");
 		process.exit(1);
 	}
+	if (Object.keys(bumpSelections).length === 0) {
+		console.log("✨ No projects selected for version updates");
+		process.exit(0);
+	}
 
-	console.log(bumpSelections);
 	// Calculate new versions based on selections and current state
 	const newVersions = await calculateNewVersions(
 		config,
 		branchInfo,
 		bumpSelections,
 	);
-	console.log(newVersions);
 
 	console.log("\n📋 Version updates:");
 	for (const [projectPath, version] of Object.entries(newVersions)) {
