@@ -140,7 +140,7 @@ export async function pushPrCommand(): Promise<void> {
 		await updateMultipleProjectVersions(projectsToUpdateObjs, filteredVersions);
 
 		// Handle stable vs non-stable releases differently
-		const isStableRelease = isStableTag(config, branchInfo.tag);
+		const isStableRelease = isStableTag(branchInfo.tag);
 
 		if (isStableRelease) {
 			// For stable releases: update baseVersion in config and clear workspaceUpdated
@@ -299,7 +299,7 @@ async function calculateNewVersions(
 	}
 
 	// Check if this is a stable release
-	const isStableRelease = isStableTag(config, branchInfo.tag);
+	const isStableRelease = isStableTag(branchInfo.tag);
 
 	for (const project of config.projects) {
 		const projectPath = project.path;

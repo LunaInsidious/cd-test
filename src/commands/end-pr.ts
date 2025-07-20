@@ -99,57 +99,7 @@ export async function endPrCommand(): Promise<void> {
 	}
 
 	// Check if this is a stable release
-	const isStableRelease = isStableTag(config, branchInfo.tag);
-
-	if (isStableRelease) {
-		// For stable releases, update baseVersion in config.json with current workspaceUpdated
-		if (
-			branchInfo.workspaceUpdated &&
-			Object.keys(branchInfo.workspaceUpdated).length > 0
-		) {
-			console.log("📝 Updating baseVersion for stable release...");
-
-			// Update project baseVersions to the released stable versions
-			const updatedConfig = { ...config };
-			for (const project of updatedConfig.projects) {
-				const stableVersion = branchInfo.workspaceUpdated[project.path];
-				if (stableVersion) {
-					project.baseVersion = stableVersion;
-				}
-			}
-
-			// Save updated config
-			await updateConfig(updatedConfig);
-
-			console.log("\n📋 Updated baseVersions:");
-			for (const [projectPath, version] of Object.entries(
-				branchInfo.workspaceUpdated,
-			)) {
-				console.log(`  • ${projectPath}: ${version}`);
-			}
-
-			// Commit config changes using package names
-			const versionEntries = [];
-			for (const [path, version] of Object.entries(
-				branchInfo.workspaceUpdated,
-			)) {
-				try {
-					const packageName = await getPackageName(path);
-					versionEntries.push(`${packageName}(${version})`);
-				} catch {
-					// Fallback to path if package name is not available
-					versionEntries.push(`${path}(${version})`);
-				}
-			}
-			const commitMessage = `update baseVersion for stable release: ${versionEntries.join(", ")}`;
-
-			console.log(`\n📝 Committing baseVersion updates: ${commitMessage}`);
-			await commitChanges(commitMessage);
-
-			console.log("📤 Pushing baseVersion updates...");
-			await pushChanges(currentBranch);
-		}
-	}
+	const isStableRelease = isStableTag(branchInfo.tag);
 
 	// Get the next version tag configuration
 	const nextTag = currentVersionTag.next;
@@ -186,6 +136,31 @@ export async function endPrCommand(): Promise<void> {
 				(p) => newVersions[p.path] !== undefined,
 			);
 
+			if (isStableRelease) {
+				// update config baseVersion for stable releases
+				console.log("🔄 Updating baseVersion in config for stable release...");
+				for (const project of projectsToUpdate) {
+					const newBaseVersion = newVersions[project.path];
+					if (!newBaseVersion) {
+						throw new Error(
+							`Project ${project.path} does not have a baseVersion defined`,
+						);
+					}
+					const newConfig = {
+						...config,
+						projects: config.projects.map((p) =>
+							p.path === project.path
+								? { ...p, baseVersion: newBaseVersion }
+								: p,
+						),
+					};
+					await updateConfig(newConfig);
+					console.log(
+						`Updated baseVersion for ${project.baseVersion} to ${newBaseVersion}`,
+					);
+				}
+			}
+
 			await updateMultipleProjectVersions(projectsToUpdate, newVersions);
 
 			// Generate commit message using package names
@@ -211,7 +186,7 @@ export async function endPrCommand(): Promise<void> {
 
 	// This is a workaround for GitHub Actions not picking up changes immediately
 	console.log("\n⏳ Waiting for changes to propagate...");
-	await new Promise((resolve) => setTimeout(resolve, 5000));
+	await new Promise((resolve) => setTimeout(resolve, 1000));
 
 	// Clean up branch info file
 	console.log("\n🧹 Cleaning up branch info file...");
@@ -268,7 +243,7 @@ async function calculateNextVersions(
 	}
 
 	// Check if the next tag is a stable release
-	const isNextStableRelease = isStableTag(config, nextTag);
+	const isNextStableRelease = isStableTag(nextTag);
 
 	for (const [projectPath] of Object.entries(branchInfo.workspaceUpdated)) {
 		const project = config.projects.find((p) => p.path === projectPath);
