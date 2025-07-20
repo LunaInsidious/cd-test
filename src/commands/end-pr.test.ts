@@ -28,6 +28,7 @@ vi.mock("../utils/config.js", async (importOriginal) => {
 		deleteBranchInfo: vi.fn(),
 		loadBranchInfo: vi.fn(),
 		loadConfig: vi.fn(),
+		updateBranchInfo: vi.fn(),
 		updateConfig: vi.fn(),
 	};
 });
@@ -58,6 +59,8 @@ import {
 	deleteBranchInfo,
 	loadBranchInfo,
 	loadConfig,
+	updateBranchInfo,
+	updateConfig,
 } from "../utils/config.js";
 import {
 	commitChanges,
@@ -83,6 +86,8 @@ const mockLoadConfig = vi.mocked(loadConfig);
 const mockLoadBranchInfo = vi.mocked(loadBranchInfo);
 const mockGetCurrentBranch = vi.mocked(getCurrentBranch);
 const mockDeleteBranchInfo = vi.mocked(deleteBranchInfo);
+const mockUpdateBranchInfo = vi.mocked(updateBranchInfo);
+const mockUpdateConfig = vi.mocked(updateConfig);
 const mockCommitChanges = vi.mocked(commitChanges);
 const mockPushChanges = vi.mocked(pushChanges);
 const mockUpdateMultipleProjectVersions = vi.mocked(
@@ -167,6 +172,8 @@ describe("endPrCommand", () => {
 			"https://github.com/test/repo/pull/123",
 		);
 		mockDeleteBranchInfo.mockResolvedValue(undefined);
+		mockUpdateBranchInfo.mockResolvedValue(undefined);
+		mockUpdateConfig.mockResolvedValue(undefined);
 		mockCommitChanges.mockResolvedValue(undefined);
 		mockPushChanges.mockResolvedValue(undefined);
 		mockSwitchToBranch.mockResolvedValue(undefined);
@@ -286,10 +293,6 @@ describe("endPrCommand", () => {
 				"https://github.com/test/repo/pull/123",
 			);
 
-			// Should switch back to parent branch and delete feature branch
-			expect(mockSwitchToBranch).toHaveBeenCalledWith("main");
-			expect(mockDeleteLocalBranch).toHaveBeenCalledWith("feat/test(alpha)");
-
 			// Check console output
 			expect(consoleLogSpy).toHaveBeenCalledWith(
 				"🏁 Finalizing and merging PR...",
@@ -336,10 +339,6 @@ describe("endPrCommand", () => {
 			expect(mockDeleteBranchInfo).toHaveBeenCalled();
 			expect(mockMergePullRequest).toHaveBeenCalled();
 
-			// Should switch back to parent branch and delete feature branch
-			expect(mockSwitchToBranch).toHaveBeenCalledWith("main");
-			expect(mockDeleteLocalBranch).toHaveBeenCalledWith("feat/test(alpha)");
-
 			expect(consoleLogSpy).toHaveBeenCalledWith(
 				"✨ No next version configured, skipping version updates",
 			);
@@ -362,10 +361,6 @@ describe("endPrCommand", () => {
 			// Should still clean up and merge
 			expect(mockDeleteBranchInfo).toHaveBeenCalled();
 			expect(mockMergePullRequest).toHaveBeenCalled();
-
-			// Should switch back to parent branch and delete feature branch
-			expect(mockSwitchToBranch).toHaveBeenCalledWith("main");
-			expect(mockDeleteLocalBranch).toHaveBeenCalledWith("feat/test(alpha)");
 		});
 	});
 });

@@ -12,11 +12,9 @@ import {
 } from "../utils/config.js";
 import {
 	commitChanges,
-	deleteLocalBranch,
 	getCurrentBranch,
 	getTagsMatchingPattern,
 	pushChanges,
-	switchToBranch,
 } from "../utils/git.js";
 import {
 	checkPrExists,
@@ -149,6 +147,7 @@ export async function endPrCommand(): Promise<void> {
 					}
 					const newConfig = {
 						...config,
+						tag: nextTag,
 						projects: config.projects.map((p) =>
 							p.path === project.path
 								? { ...p, baseVersion: newBaseVersion }
@@ -161,9 +160,11 @@ export async function endPrCommand(): Promise<void> {
 					);
 				}
 			}
-			await updateBranchInfo(currentBranch, newVersions);
 
 			await updateMultipleProjectVersions(projectsToUpdate, newVersions);
+
+			// Update branch info with the new versions for next tag
+			await updateBranchInfo(currentBranch, newVersions);
 
 			// Generate commit message using package names
 			const versionEntries = [];
@@ -203,23 +204,6 @@ export async function endPrCommand(): Promise<void> {
 	// Merge the PR
 	console.log("\n🔀 Merging pull request...");
 	await mergePullRequest(prUrl);
-
-	// Switch back to parent branch and delete the feature branch
-	console.log(`\n🔄 Switching back to ${branchInfo.parentBranch} branch...`);
-	await switchToBranch(branchInfo.parentBranch);
-
-	console.log(`🗑️  Deleting local branch: ${currentBranch}`);
-	try {
-		await deleteLocalBranch(currentBranch);
-		console.log(`✅ Local branch '${currentBranch}' deleted successfully`);
-	} catch (error) {
-		console.warn(
-			`⚠️  Failed to delete local branch '${currentBranch}': ${error instanceof Error ? error.message : String(error)}`,
-		);
-		console.warn(
-			`You may need to delete it manually with: git branch -d ${currentBranch}`,
-		);
-	}
 
 	console.log("✅ End PR completed successfully!");
 }
