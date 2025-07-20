@@ -1,0 +1,107 @@
+name: Publish Container Image
+
+on:
+  workflow_call:
+    inputs:
+      workspace_path:
+        description: 'Path to the workspace to publish'
+        required: true
+        type: string
+      workspace_version:
+        description: 'Version to publish for the workspace'
+        required: true
+        type: string
+      release_tag:
+        description: 'Release tag (e.g., alpha, rc, stable)'
+        required: true
+        type: string
+
+permissions:
+  contents: write
+  packages: write
+
+jobs:
+  publish:
+    name: Publish Container Image (${{ inputs.workspace_path }})
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the repo
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Get package name
+        id: get-name
+        working-directory: ${{ inputs.workspace_path }}
+        # TODO: ts以外の言語に対応、monorepoでワークスペースパスのpackage.jsonを参照
+        run: node -e "console.log('name=' + require('./package.json').name)" >> "$GITHUB_OUTPUT"
+      - name: Verify version matches expected
+        working-directory: ${{ inputs.workspace_path }}
+        run: |
+          ACTUAL_VERSION=$(node -e "console.log(require('./package.json').version)")
+          if [ "$ACTUAL_VERSION" != "${{ inputs.workspace_version }}" ]; then
+            echo "❌ Version mismatch: expected ${{ inputs.workspace_version }}, got $ACTUAL_VERSION"
+            exit 1
+          fi
+          echo "✅ Version verified: $ACTUAL_VERSION"
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v2
+        with:
+          # TODO: docker hubをデフォルトにする
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Check if the image for the version is already pushed
+        id: tag-exists
+        run: |
+          if docker manifest inspect ghcr.io/${GITHUB_REPOSITORY_OWNER}/${PACKAGE_NAME}:${PACKAGE_VERSION} > /dev/null 2>&1; then
+            echo "Docker tag exists"
+            echo "tag_exists=1" >> "$GITHUB_OUTPUT"
+          else
+            echo "Docker tag does not exist"
+            echo "tag_exists=0" >> "$GITHUB_OUTPUT"
+          fi
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PACKAGE_NAME: ${{ steps.get-name.outputs.name }}
+          PACKAGE_VERSION: ${{ inputs.workspace_version }}
+      - name: Error if the image for the version is already pushed
+        if: ${{steps.tag-exists.outputs.tag_exists == 1}}
+        run: |
+          echo "::error::The image for the version ${{ inputs.workspace_version }} is already pushed."
+          exit 1
+      - name: Add Tag
+        if: >-
+          ${{steps.tag-exists.outputs.tag_exists == 0 }}
+        run: |
+          TAG_NAME="${PACKAGE_NAME}-v${VERSION}"
+          git tag "$TAG_NAME"
+          git push --tags origin "$TAG_NAME"
+        env:
+          PACKAGE_NAME: ${{ steps.get-name.outputs.name }}
+          VERSION: ${{ inputs.workspace_version }}
+      - name: Extract metadata (tags, labels) for Docker
+        if: >-
+          ${{steps.tag-exists.outputs.tag_exists == 0}}
+        id: meta
+        uses: docker/metadata-action@v3
+        with:
+          images: "ghcr.io/${{ github.repository_owner }}/${{ steps.get-name.outputs.name }}"
+          flavor: |
+            latest=false
+          tags: |
+            type=semver,pattern={{ version }},value=${{ inputs.workspace_version }}
+            type=semver,pattern={{major}}.{{minor}},value=${{ inputs.workspace_version }},enable=${{ inputs.release_tag == 'stable' }}
+            type=semver,pattern={{major}},value=${{ inputs.workspace_version }},enable=${{ inputs.release_tag == 'stable' }}
+            type=raw,value=latest,enable=${{ inputs.release_tag == 'stable' }}
+            type=raw,value=${{ inputs.release_tag }},enable=${{ inputs.release_tag != 'stable' }}
+      - name: Build and push Docker image
+        if: >-
+          ${{steps.tag-exists.outputs.tag_exists == 0}}
+        uses: docker/build-push-action@v5
+        with:
+          context: ${{ inputs.workspace_path }}
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          # 必要に応じて秘密情報を build-args に追加
+          # build-args: |
+          #   "XXX_KEY=${{ secrets.XXX_KEY }}"

@@ -1,0 +1,26 @@
+{
+	"versioningStrategy": "fixed",
+	"versionTags": [
+		{
+			"alpha": {
+				"versionSuffixStrategy": "timestamp"
+			}
+		},
+		{
+			"rc": {
+				"versionSuffixStrategy": "increment",
+				"next": "stable"
+			}
+		}
+	],
+	"projects": [
+		{
+			"path": ".",
+			"type": "typescript",
+			"baseVersion": "1.0.0",
+			"bumpedVersions": [],
+			"deps": [],
+			"registries": ["npm"]
+		}
+	]
+}
