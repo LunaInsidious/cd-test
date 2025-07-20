@@ -78,12 +78,14 @@ export async function pushPrCommand(): Promise<void> {
 		process.exit(1);
 	}
 
+	console.log(bumpSelections);
 	// Calculate new versions based on selections and current state
 	const newVersions = await calculateNewVersions(
 		config,
 		branchInfo,
 		bumpSelections,
 	);
+	console.log(newVersions);
 
 	console.log("\n📋 Version updates:");
 	for (const [projectPath, version] of Object.entries(newVersions)) {
