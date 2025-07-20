@@ -60,6 +60,7 @@ export async function checkPrExists(): Promise<boolean> {
 			"--json",
 			"url",
 		]);
+		console.log("PR status result:", result);
 		return result !== ""; // If result is empty, no PR exists
 	} catch (_) {
 		// If command fails, assume no PR exists
