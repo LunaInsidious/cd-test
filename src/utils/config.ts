@@ -368,6 +368,9 @@ export async function deleteBranchInfo(currentBranch: string): Promise<void> {
 				/[^a-zA-Z0-9]/g,
 				"-",
 			);
+			console.log(
+				`Comparing filename branch: ${filenameBranch} with normalized current branch: ${normalizedCurrentBranch}`,
+			);
 
 			return filenameBranch === normalizedCurrentBranch;
 		});
