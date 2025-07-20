@@ -19,6 +19,9 @@ import { endPrCommand } from "./end-pr.js";
 // Mock external dependencies
 vi.mock("../utils/config.js", async (importOriginal) => {
 	const actual = await importOriginal();
+	if (typeof actual !== "object" || actual === null) {
+		throw new Error("Expected a module object");
+	}
 	return {
 		...actual,
 		checkInitialized: vi.fn(),
@@ -52,7 +55,6 @@ import {
 	deleteBranchInfo,
 	loadBranchInfo,
 	loadConfig,
-	updateConfig,
 } from "../utils/config.js";
 import {
 	commitChanges,
@@ -73,7 +75,6 @@ const mockLoadConfig = vi.mocked(loadConfig);
 const mockLoadBranchInfo = vi.mocked(loadBranchInfo);
 const mockGetCurrentBranch = vi.mocked(getCurrentBranch);
 const mockDeleteBranchInfo = vi.mocked(deleteBranchInfo);
-const mockUpdateConfig = vi.mocked(updateConfig);
 const mockCommitChanges = vi.mocked(commitChanges);
 const mockPushChanges = vi.mocked(pushChanges);
 const mockUpdateMultipleProjectVersions = vi.mocked(

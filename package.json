@@ -1,6 +1,6 @@
 {
 	"name": "cd-tools",
-	"version": "1.0.1-alpha.20250720083810",
+	"version": "1.0.1-alpha.20250720105923",
 	"bin": {
 		"cd-tools": "dist/index.js"
 	},
@@ -17,7 +17,6 @@
 		"test": "vitest --run",
 		"test:watch": "vitest --watch",
 		"test:coverage": "vitest --coverage",
-		"web-search": "gemini --prompt",
 		"dev": "npm run build && node dist/index.js"
 	},
 	"keywords": [],

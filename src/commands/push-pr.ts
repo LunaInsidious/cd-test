@@ -135,11 +135,11 @@ export async function pushPrCommand(): Promise<void> {
 
 		// Handle stable vs non-stable releases differently
 		const isStableRelease = isStableTag(config, branchInfo.tag);
-		
+
 		if (isStableRelease) {
 			// For stable releases: update baseVersion in config and clear workspaceUpdated
 			console.log("📝 Updating baseVersion for stable release...");
-			
+
 			// Update project baseVersions to the new stable versions
 			const updatedConfig = { ...config };
 			for (const project of updatedConfig.projects) {
@@ -148,10 +148,10 @@ export async function pushPrCommand(): Promise<void> {
 					project.baseVersion = newVersion;
 				}
 			}
-			
+
 			// Save updated config
 			await updateConfig(updatedConfig);
-			
+
 			// Clear workspaceUpdated from branch info for stable releases
 			await updateBranchInfo(currentBranch, {});
 		} else {
