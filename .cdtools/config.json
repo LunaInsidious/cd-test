@@ -17,7 +17,7 @@
 		{
 			"path": ".",
 			"type": "typescript",
-			"baseVersion": "1.0.0",
+			"baseVersion": "1.1.0",
 			"bumpedVersions": [],
 			"deps": [],
 			"registries": ["npm"]
