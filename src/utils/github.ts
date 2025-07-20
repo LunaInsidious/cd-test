@@ -211,7 +211,7 @@ export async function mergePullRequest(prUrl: string): Promise<void> {
 		]);
 	} catch (error) {
 		throw new GitHubError(
-			`Failed to merge pull request: ${error instanceof Error ? error.message : String(error)}`,
+			`Failed to merge pull request: ${error instanceof Error ? error.message : String(error)}\nPlease ensure that "Allow auto merge" and "Allow squash merging" are enabled in your GitHub settings.`,
 			`gh pr merge --auto --delete-branch --squash ${prUrl}`,
 		);
 	}

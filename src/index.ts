@@ -47,6 +47,7 @@ async function main(): Promise<void> {
 				console.log("  end-pr    Finalize release and merge PR");
 				break;
 
+			// Handle unknown commands
 			default:
 				console.error(`Unknown command: ${command}`);
 				process.exit(1);

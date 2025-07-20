@@ -140,7 +140,7 @@ export async function pushPrCommand(): Promise<void> {
 		await updateMultipleProjectVersions(projectsToUpdateObjs, filteredVersions);
 
 		// Handle stable vs non-stable releases differently
-		const isStableRelease = isStableTag(config, branchInfo.tag);
+		const isStableRelease = isStableTag(branchInfo.tag);
 
 		if (isStableRelease) {
 			// For stable releases: update baseVersion in config and clear workspaceUpdated
@@ -157,13 +157,8 @@ export async function pushPrCommand(): Promise<void> {
 
 			// Save updated config
 			await updateConfig(updatedConfig);
-
-			// Clear workspaceUpdated from branch info for stable releases
-			await updateBranchInfo(currentBranch, {});
-		} else {
-			// For non-stable releases: update branch info with workspace updates
-			await updateBranchInfo(currentBranch, filteredVersions);
 		}
+		await updateBranchInfo(currentBranch, filteredVersions);
 
 		// Generate commit message using package names
 		const versionEntries = [];
@@ -299,7 +294,7 @@ async function calculateNewVersions(
 	}
 
 	// Check if this is a stable release
-	const isStableRelease = isStableTag(config, branchInfo.tag);
+	const isStableRelease = isStableTag(branchInfo.tag);
 
 	for (const project of config.projects) {
 		const projectPath = project.path;
@@ -689,23 +684,16 @@ if (import.meta.vitest) {
 
 		it("should generate increment versions", () => {
 			// Test the getNextIncrementFromTags function directly
-			const existingTags = [
-				"1.0.0-alpha.0",
-				"1.0.0-alpha.1", 
-				"1.0.0-alpha.2",
-			];
-			
+			const existingTags = ["1.0.0-alpha.0", "1.0.0-alpha.1", "1.0.0-alpha.2"];
+
 			// Should return 0 for rc since no rc tags exist
 			expect(getNextIncrementFromTags(existingTags, "1.0.0", "rc")).toBe(0);
-			
+
 			// Should return 3 for alpha since alpha.0, alpha.1, alpha.2 exist
 			expect(getNextIncrementFromTags(existingTags, "1.0.0", "alpha")).toBe(3);
-			
+
 			// Test with library prefix
-			const libTags = [
-				"mylib-1.0.0-rc.0",
-				"mylib-1.0.0-rc.1",
-			];
+			const libTags = ["mylib-1.0.0-rc.0", "mylib-1.0.0-rc.1"];
 			expect(getNextIncrementFromTags(libTags, "1.0.0", "rc")).toBe(2);
 		});
 	});

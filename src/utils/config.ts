@@ -203,32 +203,8 @@ export function getAvailableVersionTags(
 	return tags;
 }
 
-/**
- * Check if a tag is a stable tag (not directly defined in versionTags but referenced by 'next')
- */
-export function isStableTag(config: Config, tagName: string): boolean {
-	// "stable" is a reserved word and always considered a stable tag
-	if (tagName === "stable") {
-		return true;
-	}
-
-	// Check if tag is directly defined in versionTags
-	for (const versionTag of config.versionTags) {
-		if (tagName in versionTag) {
-			return false;
-		}
-	}
-
-	// Check if tag is referenced by any 'next' field
-	for (const versionTag of config.versionTags) {
-		for (const tagConfig of Object.values(versionTag)) {
-			if (tagConfig.next === tagName) {
-				return true;
-			}
-		}
-	}
-
-	return false;
+export function isStableTag(tagName: string): boolean {
+	return tagName === "stable";
 }
 
 /**
@@ -247,7 +223,7 @@ export function getVersionTagConfig(
 	}
 
 	// For stable tags, return a default configuration (no suffix strategy needed)
-	if (isStableTag(config, tagName)) {
+	if (isStableTag(tagName)) {
 		return { versionSuffixStrategy: "increment" }; // Default, but won't be used for stable releases
 	}
 
