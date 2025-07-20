@@ -10,6 +10,7 @@
 #   - docker-matrix: JSON matrix for Docker workspaces
 #   - has-npm: true/false
 #   - has-docker: true/false
+#   - release-tag: tag from branch info (e.g., alpha, rc, stable)
 
 set -euo pipefail
 
@@ -78,7 +79,8 @@ WORKSPACE_DATA=$(node -e "
 
     console.log(JSON.stringify({
         npm: npmWorkspaces,
-        docker: dockerWorkspaces
+        docker: dockerWorkspaces,
+        tag: branchInfo.tag || 'stable'
     }));
 ")
 
@@ -93,14 +95,20 @@ case "$REGISTRY_FILTER" in
             const data = JSON.parse(require('fs').readFileSync('/dev/stdin', 'utf-8'));
             console.log(data.npm.length > 0 ? 'true' : 'false');
         ")
+        RELEASE_TAG=$(echo "$WORKSPACE_DATA" | node -e "
+            const data = JSON.parse(require('fs').readFileSync('/dev/stdin', 'utf-8'));
+            console.log(data.tag);
+        ")
 
         # Output results
         if [ -n "${GITHUB_OUTPUT:-}" ]; then
             echo "npm-matrix=$NPM_MATRIX" >> "$GITHUB_OUTPUT"
             echo "has-npm=$HAS_NPM" >> "$GITHUB_OUTPUT"
+            echo "release-tag=$RELEASE_TAG" >> "$GITHUB_OUTPUT"
         else
             echo "npm-matrix=$NPM_MATRIX"
             echo "has-npm=$HAS_NPM"
+            echo "release-tag=$RELEASE_TAG"
         fi
 
         echo "🔍 Analysis complete:" >&2
@@ -117,14 +125,20 @@ case "$REGISTRY_FILTER" in
             const data = JSON.parse(require('fs').readFileSync('/dev/stdin', 'utf-8'));
             console.log(data.docker.length > 0 ? 'true' : 'false');
         ")
+        RELEASE_TAG=$(echo "$WORKSPACE_DATA" | node -e "
+            const data = JSON.parse(require('fs').readFileSync('/dev/stdin', 'utf-8'));
+            console.log(data.tag);
+        ")
 
         # Output results
         if [ -n "${GITHUB_OUTPUT:-}" ]; then
             echo "docker-matrix=$DOCKER_MATRIX" >> "$GITHUB_OUTPUT"
             echo "has-docker=$HAS_DOCKER" >> "$GITHUB_OUTPUT"
+            echo "release-tag=$RELEASE_TAG" >> "$GITHUB_OUTPUT"
         else
             echo "docker-matrix=$DOCKER_MATRIX"
             echo "has-docker=$HAS_DOCKER"
+            echo "release-tag=$RELEASE_TAG"
         fi
 
         echo "🔍 Analysis complete:" >&2
@@ -149,6 +163,10 @@ case "$REGISTRY_FILTER" in
             const data = JSON.parse(require('fs').readFileSync('/dev/stdin', 'utf-8'));
             console.log(data.docker.length > 0 ? 'true' : 'false');
         ")
+        RELEASE_TAG=$(echo "$WORKSPACE_DATA" | node -e "
+            const data = JSON.parse(require('fs').readFileSync('/dev/stdin', 'utf-8'));
+            console.log(data.tag);
+        ")
 
         # Output results
         if [ -n "${GITHUB_OUTPUT:-}" ]; then
@@ -156,11 +174,13 @@ case "$REGISTRY_FILTER" in
             echo "docker-matrix=$DOCKER_MATRIX" >> "$GITHUB_OUTPUT"
             echo "has-npm=$HAS_NPM" >> "$GITHUB_OUTPUT"
             echo "has-docker=$HAS_DOCKER" >> "$GITHUB_OUTPUT"
+            echo "release-tag=$RELEASE_TAG" >> "$GITHUB_OUTPUT"
         else
             echo "npm-matrix=$NPM_MATRIX"
             echo "docker-matrix=$DOCKER_MATRIX"
             echo "has-npm=$HAS_NPM"
             echo "has-docker=$HAS_DOCKER"
+            echo "release-tag=$RELEASE_TAG"
         fi
 
         echo "🔍 Analysis complete:" >&2
