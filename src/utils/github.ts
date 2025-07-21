@@ -122,6 +122,10 @@ export async function createPullRequestInteractive(
 			.map((branch) => ({ title: branch, value: branch }));
 
 		// Add default as first option if not already in list
+		console.log(
+			`Default base branch: ${defaultBaseBranch}, choices:`,
+			branchChoices,
+		);
 		if (!branchChoices.some((choice) => choice.value === defaultBaseBranch)) {
 			branchChoices.unshift({
 				title: `${defaultBaseBranch} (default)`,
