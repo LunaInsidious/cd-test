@@ -962,7 +962,6 @@ if (import.meta.vitest) {
 				deps: ["shared/config.json", "package-a/package.json"],
 				type: "npm" as const,
 				baseVersion: "1.0.0",
-				bumpedVersions: [],
 				registries: [],
 			};
 			const changedFiles = ["shared/config.json"];
@@ -977,7 +976,6 @@ if (import.meta.vitest) {
 				deps: ["shared/config.json", "package-a/package.json"],
 				type: "npm" as const,
 				baseVersion: "1.0.0",
-				bumpedVersions: [],
 				registries: [],
 			};
 			const changedFiles = ["package-a/src/index.ts", "shared/config.json"];
@@ -992,7 +990,6 @@ if (import.meta.vitest) {
 				deps: ["shared/config.json", "package-a/package.json"],
 				type: "npm" as const,
 				baseVersion: "1.0.0",
-				bumpedVersions: [],
 				registries: [],
 			};
 			const changedFiles = ["other-package/src/index.ts"];
@@ -1007,7 +1004,6 @@ if (import.meta.vitest) {
 				deps: ["./shared/config.json", "./packages/lib/package.json"],
 				type: "npm" as const,
 				baseVersion: "1.0.0",
-				bumpedVersions: [],
 				registries: [],
 			};
 			const changedFiles = ["shared/config.json"];

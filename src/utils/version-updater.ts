@@ -127,7 +127,6 @@ if (import.meta.vitest) {
 				path: "unknown-project",
 				type: "unknown",
 				baseVersion: "1.0.0",
-				bumpedVersions: [],
 				deps: [],
 				registries: [],
 			};
@@ -145,7 +144,6 @@ if (import.meta.vitest) {
 					path: "package-a",
 					type: "npm",
 					baseVersion: "1.0.0",
-					bumpedVersions: [],
 					deps: [],
 					registries: [],
 				},
@@ -153,7 +151,6 @@ if (import.meta.vitest) {
 					path: "package-b",
 					type: "npm",
 					baseVersion: "1.0.0",
-					bumpedVersions: [],
 					deps: [],
 					registries: [],
 				},
