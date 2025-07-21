@@ -3,6 +3,46 @@ import { dirname, join } from "node:path";
 import prompts from "prompts";
 
 /**
+ * Copy a file with overwrite confirmation
+ * @param source Source file path
+ * @param target Target file path
+ * @param displayName Display name for user messages
+ * @returns true if file was copied, false if skipped
+ */
+async function copyFileWithConfirmation(
+	source: string,
+	target: string,
+	displayName: string,
+): Promise<boolean> {
+	try {
+		// Check if target file already exists
+		try {
+			await access(target);
+			const { overwrite } = await prompts({
+				type: "confirm",
+				name: "overwrite",
+				message: `${displayName} already exists. Overwrite?`,
+				initial: false,
+			});
+
+			if (!overwrite) {
+				console.log(`⏭️  Skipped ${displayName}`);
+				return false;
+			}
+		} catch {
+			// File doesn't exist, continue
+		}
+
+		await copyFile(source, target);
+		console.log(`✅ Copied ${displayName}`);
+		return true;
+	} catch (error) {
+		console.error(`❌ Failed to copy ${displayName}:`, error);
+		throw error;
+	}
+}
+
+/**
  * Initialize cd-tools configuration and workflow files
  *
  * This command:
@@ -30,26 +70,12 @@ export async function initCommand(): Promise<void> {
 	const targetConfigPath = ".cdtools/config.json";
 
 	try {
-		// Check if config already exists
-		try {
-			await access(targetConfigPath);
-			const { overwrite } = await prompts({
-				type: "confirm",
-				name: "overwrite",
-				message: ".cdtools/config.json already exists. Overwrite?",
-				initial: false,
-			});
-
-			if (!overwrite) {
-				console.log("❌ Initialization cancelled");
-				return;
-			}
-		} catch {
-			// File doesn't exist, continue
-		}
-
-		await copyFile(defaultConfigPath, targetConfigPath);
-		console.log("✅ Copied default configuration");
+		await copyFileWithConfirmation(
+			defaultConfigPath,
+			targetConfigPath,
+			".cdtools/config.json",
+		);
+		// Continue with the rest of initialization even if config was skipped
 	} catch (error) {
 		console.error("❌ Failed to copy config.json:", error);
 		process.exit(1);
@@ -122,8 +148,12 @@ export async function initCommand(): Promise<void> {
 
 			// Copy all workflows for this registry
 			for (const workflow of workflows) {
-				await copyFile(workflow.source, workflow.target);
-				console.log(`✅ Copied ${workflow.target.split("/").pop()}`);
+				const fileName = workflow.target.split("/").pop() || "workflow";
+				await copyFileWithConfirmation(
+					workflow.source,
+					workflow.target,
+					fileName,
+				);
 			}
 		} catch (error) {
 			console.error(`❌ Failed to copy workflow for ${registry}:`, error);
@@ -134,11 +164,14 @@ export async function initCommand(): Promise<void> {
 	try {
 		const analyzeScriptSource = join(defaultFilesDir, "analyze-workspaces.sh");
 		const analyzeScriptTarget = ".github/scripts/analyze-workspaces.sh";
-		await copyFile(analyzeScriptSource, analyzeScriptTarget);
-		console.log("✅ Copied analyze-workspaces.sh script");
+		await copyFileWithConfirmation(
+			analyzeScriptSource,
+			analyzeScriptTarget,
+			"analyze-workspaces.sh",
+		);
 	} catch (error) {
 		console.error("❌ Failed to copy analyze-workspaces.sh:", error);
-		process.exit(1);
+		// Don't exit on analyze script failure, continue with the rest
 	}
 
 	console.log("🎉 CD tools initialization complete!");
