@@ -146,7 +146,7 @@ const mockConfig: Config = {
 const mockBranchInfo = {
 	tag: "alpha",
 	parentBranch: "main",
-	workspaceUpdated: {
+	projectUpdated: {
 		"package-a": "1.0.1-alpha.20231225103045",
 		"package-b": "2.1.1-alpha.20231225103045",
 	},
@@ -346,7 +346,7 @@ describe("endPrCommand", () => {
 			consoleLogSpy.mockRestore();
 		});
 
-		it("should handle case with no workspaceUpdated", async () => {
+		it("should handle case with no projectUpdated", async () => {
 			const branchInfoWithoutWorkspace = {
 				tag: "alpha",
 				parentBranch: "main",

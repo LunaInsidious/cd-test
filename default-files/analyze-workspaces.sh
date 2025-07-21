@@ -28,9 +28,9 @@ fi
 CURRENT_BRANCH=$(git branch --show-current)
 BRANCH_INFO_FILE=".cdtools/$(echo "$CURRENT_BRANCH" | sed 's/[^a-zA-Z0-9]/-/g' | sed 's/--*/-/g').json"
 
-# If not found, try to find any branch info file with workspaceUpdated
+# If not found, try to find any branch info file with projectUpdated
 if [ ! -f "$BRANCH_INFO_FILE" ]; then
-    BRANCH_INFO_FILE=$(find .cdtools -name "*-*.json" -exec grep -l "workspaceUpdated" {} \; 2>/dev/null | head -1 || true)
+    BRANCH_INFO_FILE=$(find .cdtools -name "*-*.json" -exec grep -l "projectUpdated" {} \; 2>/dev/null | head -1 || true)
 fi
 
 if [ ! -f "$BRANCH_INFO_FILE" ]; then
@@ -96,7 +96,7 @@ WORKSPACE_DATA=$(node -e "
     const branchInfo = JSON.parse(require('fs').readFileSync('$BRANCH_INFO_FILE', 'utf-8'));
     const config = JSON.parse(require('fs').readFileSync('$CONFIG_FILE', 'utf-8'));
 
-    if (!branchInfo.workspaceUpdated) {
+    if (!branchInfo.projectUpdated) {
         console.log(JSON.stringify({ npm: [], docker: [] }));
         process.exit(0);
     }
@@ -104,7 +104,7 @@ WORKSPACE_DATA=$(node -e "
     const npmWorkspaces = [];
     const dockerWorkspaces = [];
 
-    for (const [workspacePath, version] of Object.entries(branchInfo.workspaceUpdated)) {
+    for (const [workspacePath, version] of Object.entries(branchInfo.projectUpdated)) {
         const project = config.projects.find(p => p.path === workspacePath);
         if (!project) continue;
 
