@@ -264,12 +264,12 @@ describe("pushPrCommand", () => {
 			consoleLogSpy.mockRestore();
 		});
 
-		it("should handle existing workspaceUpdated with minor bump", async () => {
+		it("should handle existing projectUpdated with minor bump", async () => {
 			// Mock branch info with existing workspace updates
 			const branchInfoWithWorkspace = {
 				tag: "alpha",
 				parentBranch: "main",
-				workspaceUpdated: {
+				projectUpdated: {
 					"package-a": "1.0.1-alpha.20231224103045", // patch already released (1.0.0 -> 1.0.1)
 					"package-b": "2.1.0-alpha.20231224103045", // minor already released (2.0.0 -> 2.1.0)
 				},
@@ -301,7 +301,7 @@ describe("pushPrCommand", () => {
 			const branchInfoWithUpdates = {
 				tag: "alpha",
 				parentBranch: "main",
-				workspaceUpdated: {
+				projectUpdated: {
 					"package-a": "1.0.1-alpha.20231224103045", // patch already released
 					"package-b": "2.1.0-alpha.20231224103045", // minor already released
 				},
@@ -317,7 +317,7 @@ describe("pushPrCommand", () => {
 
 			await pushPrCommand();
 
-			// Both keep workspaceUpdated versions because patch/minor already released
+			// Both keep projectUpdated versions because patch/minor already released
 			expect(consoleLogSpy).toHaveBeenCalledWith(
 				"  • package-a: 1.0.1-alpha.20231225103045",
 			);

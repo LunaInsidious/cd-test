@@ -36,7 +36,7 @@ export interface Config {
 export interface BranchInfo {
 	tag: string;
 	parentBranch: string;
-	workspaceUpdated?: Record<string, string>;
+	projectUpdated?: Record<string, string>;
 }
 
 /**
@@ -142,7 +142,7 @@ export async function loadBranchInfo(
  */
 export async function updateBranchInfo(
 	currentBranch: string,
-	workspaceUpdated: Record<string, string>,
+	projectUpdated: Record<string, string>,
 	tag?: string,
 ): Promise<void> {
 	const branchInfo = await loadBranchInfo(currentBranch);
@@ -153,7 +153,7 @@ export async function updateBranchInfo(
 	// Create new branch info object to avoid mutation
 	const updatedBranchInfo: BranchInfo = {
 		...branchInfo,
-		workspaceUpdated,
+		projectUpdated,
 		...(tag && { tag }),
 	};
 
@@ -285,18 +285,16 @@ export function compareVersions(
 /**
  * Get the bump types that have occurred in this release cycle
  * @param config - The configuration
- * @param workspaceUpdated - The workspace updates from branch info
+ * @param projectUpdated - The workspace updates from branch info
  * @returns Array of bump types that have occurred
  */
-export function getBumpTypesFromWorkspaceUpdated(
+export function getBumpTypesFromprojectUpdated(
 	config: Config,
-	workspaceUpdated: Record<string, string>,
+	projectUpdated: Record<string, string>,
 ): BumpType[] {
 	const bumpTypes = new Set<BumpType>();
 
-	for (const [projectPath, currentVersion] of Object.entries(
-		workspaceUpdated,
-	)) {
+	for (const [projectPath, currentVersion] of Object.entries(projectUpdated)) {
 		const project = config.projects.find((p) => p.path === projectPath);
 		if (!project) {
 			continue;

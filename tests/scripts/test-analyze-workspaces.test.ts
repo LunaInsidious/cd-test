@@ -94,7 +94,7 @@ describe("analyze-workspaces.sh Script Tests", () => {
 			const branchInfo = {
 				tag: "alpha",
 				parentBranch: "main",
-				workspaceUpdated: {
+				projectUpdated: {
 					"packages/frontend": "1.0.1-alpha.20231225103045",
 					"packages/fullstack": "1.5.1-alpha.20231225103045",
 				},
@@ -121,7 +121,7 @@ describe("analyze-workspaces.sh Script Tests", () => {
 			const branchInfo = {
 				tag: "alpha",
 				parentBranch: "main",
-				workspaceUpdated: {
+				projectUpdated: {
 					"packages/backend": "2.0.1-alpha.20231225103045",
 				},
 			};
@@ -146,7 +146,7 @@ describe("analyze-workspaces.sh Script Tests", () => {
 			const branchInfo = {
 				tag: "alpha",
 				parentBranch: "main",
-				workspaceUpdated: {
+				projectUpdated: {
 					"packages/backend": "2.0.1-alpha.20231225103045",
 					"packages/fullstack": "1.5.1-alpha.20231225103045",
 				},
@@ -175,7 +175,7 @@ describe("analyze-workspaces.sh Script Tests", () => {
 			const branchInfo = {
 				tag: "alpha",
 				parentBranch: "main",
-				workspaceUpdated: {
+				projectUpdated: {
 					"packages/frontend": "1.0.1-alpha.20231225103045",
 				},
 			};
@@ -200,7 +200,7 @@ describe("analyze-workspaces.sh Script Tests", () => {
 			const branchInfo = {
 				tag: "alpha",
 				parentBranch: "main",
-				workspaceUpdated: {
+				projectUpdated: {
 					"packages/frontend": "1.0.1-alpha.20231225103045",
 					"packages/backend": "2.0.1-alpha.20231225103045",
 					"packages/fullstack": "1.5.1-alpha.20231225103045",
@@ -241,7 +241,7 @@ describe("analyze-workspaces.sh Script Tests", () => {
 			const branchInfo = {
 				tag: "alpha",
 				parentBranch: "main",
-				workspaceUpdated: {
+				projectUpdated: {
 					"packages/frontend": "1.0.1-alpha.20231225103045",
 				},
 			};
@@ -268,14 +268,14 @@ describe("analyze-workspaces.sh Script Tests", () => {
 			expect(stdout).toContain('npm-matrix={"include":[]}');
 		});
 
-		it("should handle empty workspaceUpdated", async () => {
+		it("should handle empty projectUpdated", async () => {
 			// Create a valid git branch first
 			await execAsync("git checkout -b feat/empty\\(alpha\\)");
 
 			const branchInfo = {
 				tag: "alpha",
 				parentBranch: "main",
-				workspaceUpdated: {}, // Empty but present
+				projectUpdated: {}, // Empty but present
 			};
 
 			// Use exact filename pattern that matches current branch or fallback
@@ -301,7 +301,7 @@ describe("analyze-workspaces.sh Script Tests", () => {
 			const branchInfo = {
 				tag: "alpha",
 				parentBranch: "main",
-				workspaceUpdated: {
+				projectUpdated: {
 					"packages/frontend": "1.0.1-alpha.20231225103045",
 				},
 			};
@@ -318,13 +318,13 @@ describe("analyze-workspaces.sh Script Tests", () => {
 			expect(stdout).toContain("release-tag=alpha");
 		});
 
-		it("should fallback to workspaceUpdated search", async () => {
+		it("should fallback to projectUpdated search", async () => {
 			await execAsync("git checkout -b feat/unknown-pattern\\(alpha\\)");
 
 			const branchInfo = {
 				tag: "alpha",
 				parentBranch: "main",
-				workspaceUpdated: {
+				projectUpdated: {
 					"packages/frontend": "1.0.1-alpha.20231225103045",
 				},
 			};
@@ -349,7 +349,7 @@ describe("analyze-workspaces.sh Script Tests", () => {
 			const branchInfo = {
 				tag: "alpha",
 				parentBranch: "main",
-				workspaceUpdated: {
+				projectUpdated: {
 					"packages/frontend": "1.0.1-alpha.20231225103045",
 				},
 			};

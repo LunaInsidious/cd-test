@@ -39,7 +39,7 @@ import {
  * 3. Prompts user to select version bump types (patch/minor/major)
  * 4. Calculates new versions based on versioningStrategy and bumpedVersions
  * 5. Updates version files (package.json, etc.)
- * 6. Creates branch info with workspaceUpdated field
+ * 6. Creates branch info with projectUpdated field
  * 7. Commits and pushes changes
  * 8. Creates PR if it doesn't exist
  */
@@ -143,7 +143,7 @@ export async function pushPrCommand(): Promise<void> {
 		const isStableRelease = isStableTag(branchInfo.tag);
 
 		if (isStableRelease) {
-			// For stable releases: update baseVersion in config and clear workspaceUpdated
+			// For stable releases: update baseVersion in config and clear projectUpdated
 			console.log("📝 Updating baseVersion for stable release...");
 
 			// Update project baseVersions to the new stable versions
@@ -320,7 +320,7 @@ async function calculateNewVersions(
 		}
 
 		// Check if this bump type or smaller has already been released for this specific project
-		const currentProjectVersion = branchInfo.workspaceUpdated?.[project.path];
+		const currentProjectVersion = branchInfo.projectUpdated?.[project.path];
 		let projectBumpType: BumpType | null = null;
 		if (currentProjectVersion) {
 			projectBumpType = compareVersions(
@@ -340,11 +340,11 @@ async function calculateNewVersions(
 			const newBaseVersion = bumpVersion(project.baseVersion, selectedBump);
 			newVersion = newBaseVersion;
 		} else if (hasBeenReleased && currentProjectVersion) {
-			// Use the existing workspaceUpdated version, just update suffix
+			// Use the existing projectUpdated version, just update suffix
 			const existingVersionBase = currentProjectVersion.split("-")[0];
 			if (!existingVersionBase) {
 				throw new Error(
-					`Invalid version format in workspaceUpdated: ${currentProjectVersion}`,
+					`Invalid version format in projectUpdated: ${currentProjectVersion}`,
 				);
 			}
 			newVersion = await generateVersionWithSuffix(
