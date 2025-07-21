@@ -64,7 +64,7 @@ export async function initCommand(): Promise<void> {
 		message: "Select target registries:",
 		choices: [
 			{ title: "npm", value: "npm" },
-			{ title: "docker hub (ghcr.io)", value: "docker" },
+			{ title: "docker(ghcr.io)", value: "docker" },
 		],
 		min: 1,
 	});
