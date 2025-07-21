@@ -192,6 +192,8 @@ export async function pushChanges(branchName: string): Promise<void> {
  */
 export async function getAvailableBranches(): Promise<string[]> {
 	try {
+		// remove remote tracking branches(deleted on remote)
+		await execGit(["fetch", "--prune"]);
 		const output = await execGit(["branch", "-a", "--format=%(refname:short)"]);
 		return output
 			.split("\n")
