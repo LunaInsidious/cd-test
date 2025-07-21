@@ -47,6 +47,16 @@ async function main(): Promise<void> {
 				console.log("  end-pr    Finalize release and merge PR");
 				break;
 
+			case "version":
+			case "--version":
+			case "-v": {
+				const packageJson = await import("../package.json", {
+					with: { type: "json" },
+				});
+				console.log(`v${packageJson.default.version}`);
+				break;
+			}
+
 			// Handle unknown commands
 			default:
 				console.error(`Unknown command: ${command}`);
