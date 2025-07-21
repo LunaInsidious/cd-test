@@ -1,7 +1,7 @@
 {
-	"tag": "rc",
+	"tag": "stable",
 	"parentBranch": "main",
 	"projectUpdated": {
-		".": "1.1.7-rc.6"
+		".": "1.1.7"
 	}
 }
