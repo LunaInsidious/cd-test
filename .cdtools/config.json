@@ -17,10 +17,12 @@
 		{
 			"path": ".",
 			"type": "typescript",
-			"baseVersion": "1.1.3",
+			"baseVersion": "1.1.4",
 			"bumpedVersions": [],
 			"deps": [],
-			"registries": ["npm"]
+			"registries": [
+				"npm"
+			]
 		}
 	]
 }
