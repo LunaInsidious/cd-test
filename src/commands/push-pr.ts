@@ -249,10 +249,11 @@ async function selectBumpTypes(
 		const result: Record<string, BumpType> = {};
 
 		for (const project of config.projects) {
+			const packageName = await getPackageName(project.path);
 			const { bumpType } = await prompts({
 				type: "select",
 				name: "bumpType",
-				message: `Select version bump type for project '${project.path}':`,
+				message: `Select version bump type for project '${packageName}':`,
 				choices: [
 					{ title: "skip (no changes)", value: "skip" },
 					{ title: "patch (1.0.0 → 1.0.1)", value: "patch" },

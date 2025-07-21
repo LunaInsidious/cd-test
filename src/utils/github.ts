@@ -118,11 +118,13 @@ export async function createPullRequestInteractive(
 
 		// Filter out current branch and add "Create new branch" option
 		const branchChoices = availableBranches
-			.filter((branch) => branch !== currentBranch)
+			.filter(
+				(branch) => branch !== currentBranch && branch !== defaultBaseBranch,
+			)
 			.map((branch) => ({ title: branch, value: branch }));
 
-		// Add default as first option if not already in list
-		if (!branchChoices.some((choice) => choice.value === defaultBaseBranch)) {
+		// Add default base branch option
+		if (availableBranches.some((branch) => branch === defaultBaseBranch)) {
 			branchChoices.unshift({
 				title: `${defaultBaseBranch} (default)`,
 				value: defaultBaseBranch,

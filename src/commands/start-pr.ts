@@ -142,6 +142,6 @@ export async function startPrCommand(): Promise<void> {
 	console.log("✅ Release PR started successfully!");
 	console.log("");
 	console.log("Next steps:");
-	console.log("1. Make your changes");
+	console.log("1. Make your changes and commit them to the new branch.");
 	console.log("2. Run 'cd-tools push-pr' to update versions and create PR");
 }
