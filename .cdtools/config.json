@@ -17,9 +17,11 @@
 		{
 			"path": ".",
 			"type": "typescript",
-			"baseVersion": "1.1.7",
+			"baseVersion": "1.1.8",
 			"deps": [],
-			"registries": ["npm"]
+			"registries": [
+				"npm"
+			]
 		}
 	]
 }
