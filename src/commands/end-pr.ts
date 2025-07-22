@@ -1,3 +1,4 @@
+import prompts from "prompts";
 import {
 	type BranchInfo,
 	type Config,
@@ -88,6 +89,19 @@ export async function endPrCommand(): Promise<void> {
 		process.exit(1);
 	}
 	console.log(`📋 Pull request URL: ${prUrl}`);
+
+	// 本当にマージするか確認を入れる
+	const confirmMerge = await prompts({
+		type: "confirm",
+		name: "confirm",
+		message: `Are you sure you want to merge the PR? (${prUrl})`,
+		initial: true,
+	});
+
+	if (!confirmMerge.confirm) {
+		console.log("❌ Merge cancelled.");
+		return;
+	}
 
 	// Get the current version tag configuration
 	const currentVersionTag = getVersionTagConfig(config, branchInfo.tag);
@@ -184,11 +198,10 @@ export async function endPrCommand(): Promise<void> {
 			console.log("📤 Pushing next version changes...");
 			await pushChanges(currentBranch);
 		}
+		// This is a workaround for GitHub Actions not picking up changes immediately
+		console.log("\n⏳ Waiting for changes to propagate...");
+		await new Promise((resolve) => setTimeout(resolve, 1000));
 	}
-
-	// This is a workaround for GitHub Actions not picking up changes immediately
-	console.log("\n⏳ Waiting for changes to propagate...");
-	await new Promise((resolve) => setTimeout(resolve, 1000));
 
 	// Clean up branch info file
 	console.log("\n🧹 Cleaning up branch info file...");
