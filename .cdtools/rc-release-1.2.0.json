@@ -1,4 +1,7 @@
 {
 	"tag": "rc",
-	"parentBranch": "main"
+	"parentBranch": "main",
+	"projectUpdated": {
+		".": "1.2.0-rc.0"
+	}
 }
