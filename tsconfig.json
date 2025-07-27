@@ -10,8 +10,17 @@
 		"allowSyntheticDefaultImports": true,
 		"downlevelIteration": true,
 		"resolveJsonModule": true,
-		"types": ["vitest/importMeta"]
+		"types": [
+			"vitest/importMeta"
+		]
 	},
-	"include": ["src/**/*.ts"],
-	"exclude": ["node_modules", "dist", "src/**/*.test.ts", "src/**/*.spec.ts"]
+	"include": [
+		"src/**/*.ts"
+	],
+	"exclude": [
+		"node_modules",
+		"dist",
+		"src/**/*.test.ts",
+		"src/**/*.spec.ts"
+	]
 }

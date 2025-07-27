@@ -8,5 +8,7 @@
 	"[typescript]": {
 		"editor.defaultFormatter": "biomejs.biome"
 	},
-	"cSpell.words": ["cdtools"]
+	"cSpell.words": [
+		"cdtools"
+	]
 }
