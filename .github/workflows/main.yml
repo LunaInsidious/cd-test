@@ -1,0 +1,88 @@
+name: Main Branch CI
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  release-check:
+    name: Check for Release
+    runs-on: ubuntu-latest
+    outputs:
+      should-release: ${{ steps.check.outputs.should-release }}
+      version: ${{ steps.check.outputs.version }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Check if release is needed
+        id: check
+        run: |
+          # Check if the latest commit message indicates a release
+          COMMIT_MSG=$(git log -1 --pretty=%B)
+          if [[ "$COMMIT_MSG" == *"prepare next release:"* ]] || [[ "$COMMIT_MSG" == *"Release:"* ]]; then
+            echo "should-release=true" >> $GITHUB_OUTPUT
+            # Extract version from package.json
+            VERSION=$(node -p "require('./package.json').version")
+            echo "version=$VERSION" >> $GITHUB_OUTPUT
+          else
+            echo "should-release=false" >> $GITHUB_OUTPUT
+          fi
+
+  create-release:
+    name: Create GitHub Release
+    runs-on: ubuntu-latest
+    needs: release-check
+    if: needs.release-check.outputs.should-release == 'true'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Check if tag exists
+        id: check-tag
+        run: |
+          VERSION="${{ needs.release-check.outputs.version }}"
+          if git rev-parse "v$VERSION" >/dev/null 2>&1; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Create Release
+        if: steps.check-tag.outputs.exists == 'false'
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: v${{ needs.release-check.outputs.version }}
+          release_name: Release v${{ needs.release-check.outputs.version }}
+          body: |
+            ## Release v${{ needs.release-check.outputs.version }}
+            
+            ### Changes
+            See [commit history](https://github.com/${{ github.repository }}/commits/v${{ needs.release-check.outputs.version }}) for details.
+          draft: false
+          prerelease: ${{ contains(needs.release-check.outputs.version, '-') }}
+
+  notify-success:
+    name: Notify Success
+    runs-on: ubuntu-latest
+    needs: [release-check, create-release]
+    if: always()
+    steps:
+      - name: Send notification
+        run: |
+          if [[ "${{ needs.release-check.outputs.should-release }}" == "true" ]]; then
+            echo "✅ Release v${{ needs.release-check.outputs.version }} created successfully!"
+          else
+            echo "ℹ️ No release needed for this push to main branch"
+          fi

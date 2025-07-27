@@ -1,5 +1,8 @@
 # CD Tools
 
+[![CI](https://github.com/TakatsunoItsuki/cd-test/actions/workflows/ci.yml/badge.svg)](https://github.com/TakatsunoItsuki/cd-test/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
 A TypeScript-based Continuous Deployment (CD) tool designed for monorepo
 management with flexible versioning strategies and GitHub integration.
 
