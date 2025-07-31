@@ -1,6 +1,7 @@
 import { access, copyFile, mkdir } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import prompts from "prompts";
+import { CONFIG_PATH, LIB_DIR } from "../utils/config.js";
 
 /**
  * Copy a file with overwrite confirmation
@@ -53,11 +54,11 @@ async function copyFileWithConfirmation(
 export async function initCommand(): Promise<void> {
 	console.log("🚀 Initializing CD tools configuration...");
 
-	// Ensure .cdtools directory exists
+	// Ensure cdtools directory exists
 	try {
-		await mkdir(".cdtools", { recursive: true });
+		await mkdir(LIB_DIR, { recursive: true });
 	} catch (error) {
-		console.error("❌ Failed to create .cdtools directory:", error);
+		console.error("❌ Failed to create cdtools directory:", error);
 		process.exit(1);
 	}
 
@@ -67,14 +68,9 @@ export async function initCommand(): Promise<void> {
 		"default-files",
 		"config.json",
 	);
-	const targetConfigPath = ".cdtools/config.json";
 
 	try {
-		await copyFileWithConfirmation(
-			defaultConfigPath,
-			targetConfigPath,
-			".cdtools/config.json",
-		);
+		await copyFileWithConfirmation(defaultConfigPath, CONFIG_PATH, CONFIG_PATH);
 		// Continue with the rest of initialization even if config was skipped
 	} catch (error) {
 		console.error("❌ Failed to copy config.json:", error);

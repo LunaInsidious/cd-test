@@ -1,5 +1,18 @@
 import { access, readdir, readFile, unlink, writeFile } from "node:fs/promises";
 import path from "node:path";
+import { z } from "zod";
+import { isSystemError, NotFoundError, ValidationError } from "./error.js";
+
+export const LIB_DIR = ".cdtools";
+export const CONFIG_PATH = `${LIB_DIR}/config.json`;
+
+const constructBranchInfoPath = (
+	releaseMode: string,
+	branchName: string,
+): string => {
+	const escapedBranchName = escapeBranchNameForFilename(branchName);
+	return path.join(LIB_DIR, `${releaseMode}-${escapedBranchName}.json`);
+};
 
 /**
  * Configuration and branch tracking file utilities
@@ -56,9 +69,9 @@ export type BranchInfo = z.infer<typeof BranchInfoSchema>;
 /**
  * Check if cd-tools has been initialized
  */
-export async function checkInitialized(): Promise<boolean> {
+export async function hasConfigFile(): Promise<boolean> {
 	try {
-		await access(".cdtools/config.json");
+		await access(CONFIG_PATH);
 		return true;
 	} catch {
 		return false;
@@ -70,9 +83,18 @@ export async function checkInitialized(): Promise<boolean> {
  */
 export async function loadConfig(): Promise<Config> {
 	try {
-		const content = await readFile(".cdtools/config.json", "utf-8");
-		return JSON.parse(content) as Config;
+		const content = await readFile(CONFIG_PATH, "utf-8");
+		const data = JSON.parse(content);
+		return ConfigSchema.parse(data);
 	} catch (error) {
+		if (isSystemError(error) && error.code === "ENOENT") {
+			throw new NotFoundError("Configuration file not found.");
+		}
+		if (error instanceof z.ZodError) {
+			throw new ValidationError(
+				`Invalid configuration format: ${error.message}`,
+			);
+		}
 		throw new Error(
 			`Failed to load config: ${error instanceof Error ? error.message : String(error)}`,
 		);
@@ -95,8 +117,7 @@ export async function createBranchInfo(
 	branchName: string,
 	parentBranch: string,
 ): Promise<void> {
-	const escapedBranchName = escapeBranchNameForFilename(branchName);
-	const filename = `.cdtools/${releaseMode}-${escapedBranchName}.json`;
+	const branchInfoPath = constructBranchInfoPath(releaseMode, branchName);
 
 	const branchInfo: BranchInfo = {
 		tag: releaseMode,
@@ -104,7 +125,10 @@ export async function createBranchInfo(
 	};
 
 	try {
-		await writeFile(filename, `${JSON.stringify(branchInfo, null, "\t")}\n`);
+		await writeFile(
+			branchInfoPath,
+			`${JSON.stringify(branchInfo, null, "\t")}\n`,
+		);
 	} catch (error) {
 		throw new Error(
 			`Failed to create branch info file: ${error instanceof Error ? error.message : String(error)}`,
@@ -132,23 +156,32 @@ function parseBranchName(fullBranchName: string): {
 
 /**
  * Load branch info file for current branch
+ * @param currentBranch - The current branch name
+ * @return Parsed BranchInfo object or null if not found
+ * @throws Error if branch info file invalid format
  */
 export async function loadBranchInfo(
 	currentBranch: string,
-): Promise<BranchInfo | null> {
-	const parsed = parseBranchName(currentBranch);
-	if (!parsed) {
-		return null;
-	}
-
-	const escapedBranchName = escapeBranchNameForFilename(parsed.branchName);
-	const filename = `.cdtools/${parsed.tag}-${escapedBranchName}.json`;
-
+): Promise<BranchInfo> {
 	try {
-		const content = await readFile(filename, "utf-8");
-		return JSON.parse(content) as BranchInfo;
-	} catch {
-		return null;
+		const parsed = parseBranchName(currentBranch);
+		const branchInfoPath = constructBranchInfoPath(
+			parsed.tag,
+			parsed.branchName,
+		);
+		const content = await readFile(branchInfoPath, "utf-8");
+		const data = JSON.parse(content);
+		return BranchInfoSchema.parse(data);
+	} catch (error) {
+		if (isSystemError(error) && error.code === "ENOENT") {
+			throw new NotFoundError("Branch info file not found.");
+		}
+		if (error instanceof z.ZodError) {
+			throw new ValidationError(`Invalid branch info format: ${error.message}`);
+		}
+		throw new Error(
+			`Failed to load branch info: ${error instanceof Error ? error.message : String(error)}`,
+		);
 	}
 }
 
@@ -177,12 +210,10 @@ export async function updateBranchInfo(
 		throw new Error("Invalid branch name format");
 	}
 
-	const escapedBranchName = escapeBranchNameForFilename(parsed.branchName);
-	const filename = `.cdtools/${parsed.tag}-${escapedBranchName}.json`;
-
+	const branchInfoPath = constructBranchInfoPath(parsed.tag, parsed.branchName);
 	try {
 		await writeFile(
-			filename,
+			branchInfoPath,
 			`${JSON.stringify(updatedBranchInfo, null, "\t")}\n`,
 		);
 	} catch (error) {
@@ -303,8 +334,7 @@ export function compareVersions(
  */
 export async function updateConfig(config: Config): Promise<void> {
 	try {
-		const configPath = path.join(".cdtools", "config.json");
-		await writeFile(configPath, JSON.stringify(config, null, "\t"));
+		await writeFile(CONFIG_PATH, `${JSON.stringify(config, null, "\t")}\n`);
 	} catch (error) {
 		throw new Error(
 			`Failed to update configuration: ${error instanceof Error ? error.message : String(error)}`,
@@ -331,7 +361,7 @@ export async function deleteBranchInfo(currentBranch: string): Promise<void> {
 			.replace(/\(.*$/, ""); // Remove everything from opening parenthesis onwards
 
 		// Find existing branch info file
-		const files = await readdir(".cdtools");
+		const files = await readdir(LIB_DIR);
 		const branchInfoFile = files.find((file: string) => {
 			console.log(`Checking file: ${file}`);
 			const withoutExtension = file.replace(/\.json$/, "");
@@ -349,7 +379,7 @@ export async function deleteBranchInfo(currentBranch: string): Promise<void> {
 		console.log(`Deleting branch info file: ${branchInfoFile}`);
 
 		if (branchInfoFile) {
-			const branchInfoPath = path.join(".cdtools", branchInfoFile);
+			const branchInfoPath = path.join(LIB_DIR, branchInfoFile);
 			await unlink(branchInfoPath);
 		}
 	} catch (error) {

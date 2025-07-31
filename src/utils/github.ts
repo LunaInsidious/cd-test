@@ -1,6 +1,4 @@
 import { spawn } from "node:child_process";
-import prompts from "prompts";
-import { getAvailableBranches, getCurrentBranch } from "./git.js";
 
 /**
  * GitHub CLI utility functions
@@ -17,7 +15,11 @@ class GitHubError extends Error {
 }
 
 /**
- * Execute gh command using spawn for security
+ * Execute a gh command and return the output
+ * @param args - Array of command line arguments for gh
+ * @returns Output of the command
+ * @throws GitHubError if the command fails
+ * @throws Error if the command execution fails
  */
 async function execGh(args: string[]): Promise<string> {
 	return new Promise((resolve, reject) => {
@@ -85,22 +87,18 @@ export async function createPullRequest(
  * If an error occurs, it throws a GitHubError
  */
 export async function getCurrentPrUrl(): Promise<string | null> {
-	try {
-		const result = await execGh([
-			"pr",
-			"status",
-			"--jq",
-			".currentBranch.url",
-			"--json",
-			"url",
-		]);
-		if (result !== "") {
-			return result; // Returns PR URL if exists
-		}
-		return null; // No PR exists for current branch
-	} catch (_error) {
-		return null;
+	const result = await execGh([
+		"pr",
+		"status",
+		"--jq",
+		".currentBranch.url",
+		"--json",
+		"url",
+	]);
+	if (result !== "") {
+		return result; // Returns PR URL if exists
 	}
+	return null; // No PR exists for current branch
 }
 
 /**

@@ -1,34 +1,32 @@
 import path from "node:path";
 import prompts from "prompts";
-// Remove vitest import to avoid conflicts with test files
 import {
 	type BranchInfo,
 	type BumpType,
 	type Config,
-	checkInitialized,
 	compareVersions,
 	getVersionTagConfig,
 	isStableTag,
-	loadBranchInfo,
-	loadConfig,
 	updateBranchInfo,
 	updateConfig,
 } from "../utils/config.js";
 import {
 	commitChanges,
+	getAvailableBranches,
 	getChangedFiles,
 	getCurrentBranch,
-	getTagsMatchingPattern,
 	pushChanges,
 } from "../utils/git.js";
-import {
-	checkPrExists,
-	createPullRequestInteractive,
-} from "../utils/github.js";
+import { createPullRequest, getCurrentPrUrl } from "../utils/github.js";
 import {
 	getPackageName,
 	updateMultipleProjectVersions,
 } from "../utils/version-updater.js";
+import {
+	ensurePRInitConfig,
+	ensurePRStartBranchInfo,
+	generateVersionWithSuffix,
+} from "./common.js";
 
 /**
  * Update versions and create/update PR

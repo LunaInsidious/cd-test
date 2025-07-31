@@ -2,30 +2,24 @@ import prompts from "prompts";
 import {
 	type BranchInfo,
 	type Config,
-	checkInitialized,
 	deleteBranchInfo,
 	getVersionTagConfig,
 	isStableTag,
-	loadBranchInfo,
-	loadConfig,
 	updateBranchInfo,
 	updateConfig,
 } from "../utils/config.js";
-import {
-	commitChanges,
-	getCurrentBranch,
-	getTagsMatchingPattern,
-	pushChanges,
-} from "../utils/git.js";
-import {
-	checkPrExists,
-	getCurrentPrUrl,
-	mergePullRequest,
-} from "../utils/github.js";
+import { commitChanges, getCurrentBranch, pushChanges } from "../utils/git.js";
+import { mergePullRequest } from "../utils/github.js";
 import {
 	getPackageName,
 	updateMultipleProjectVersions,
 } from "../utils/version-updater.js";
+import {
+	ensurePRExists,
+	ensurePRInitConfig,
+	ensurePRStartBranchInfo,
+	generateVersionWithSuffix,
+} from "./common.js";
 
 /**
  * Finalize and merge PR
