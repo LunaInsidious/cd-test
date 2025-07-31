@@ -59,10 +59,16 @@ const ConfigSchema = z.object({
 });
 export type Config = z.infer<typeof ConfigSchema>;
 
+const ProjectUpdatedSchema = z.object({
+	version: z.string(),
+	updatedAt: z.iso.datetime(),
+});
+type ProjectUpdated = z.infer<typeof ProjectUpdatedSchema>;
+
 const BranchInfoSchema = z.object({
 	tag: z.string(),
 	parentBranch: z.string(),
-	projectUpdated: z.record(z.string(), z.string()).optional(),
+	projectUpdated: z.record(z.string(), ProjectUpdatedSchema).optional(),
 });
 export type BranchInfo = z.infer<typeof BranchInfoSchema>;
 
@@ -186,10 +192,22 @@ export async function updateBranchInfo(
 		throw new Error("Branch info file not found");
 	}
 
+	const currentTime = new Date().toISOString();
+	// Convert projectUpdated to new format with updatedAt timestamp
+	const updatedProjectInfo: Record<string, ProjectUpdated> = Object.entries(
+		projectUpdated,
+	).reduce<Record<string, ProjectUpdated>>((acc, [projectPath, version]) => {
+		acc[projectPath] = {
+			version,
+			updatedAt: currentTime,
+		};
+		return acc;
+	}, {});
+
 	// Create new branch info object to avoid mutation
 	const updatedBranchInfo: BranchInfo = {
 		...branchInfo,
-		projectUpdated,
+		projectUpdated: updatedProjectInfo,
 		...(tag && { tag }),
 	};
 

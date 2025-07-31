@@ -359,12 +359,12 @@ async function calculateNewVersions(
 		}
 
 		// Check if this bump type or smaller has already been released for this specific project
-		const currentProjectVersion = branchInfo.projectUpdated?.[project.path];
+		const currentProjectInfo = branchInfo.projectUpdated?.[project.path];
 		let projectBumpType: BumpType | null = null;
-		if (currentProjectVersion) {
+		if (currentProjectInfo) {
 			projectBumpType = compareVersions(
 				project.baseVersion,
-				currentProjectVersion,
+				currentProjectInfo.version,
 			);
 		}
 
@@ -379,12 +379,12 @@ async function calculateNewVersions(
 			// For stable releases, no suffix - just the base version with bump applied
 			const newBaseVersion = bumpVersion(project.baseVersion, selectedBump);
 			newVersion = newBaseVersion;
-		} else if (hasBumpBeenReleased && currentProjectVersion) {
+		} else if (hasBumpBeenReleased && currentProjectInfo) {
 			// If the same or higher bump was already released, keep the existing version with updated suffix
-			const existingVersionBase = currentProjectVersion.split("-")[0];
+			const existingVersionBase = currentProjectInfo.version.split("-")[0];
 			if (!existingVersionBase) {
 				throw new Error(
-					`Invalid version format in projectUpdated: ${currentProjectVersion}`,
+					`Invalid version format in projectUpdated: ${currentProjectInfo.version}`,
 				);
 			}
 			newVersion = await generateVersionWithSuffix(

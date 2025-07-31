@@ -204,7 +204,9 @@ async function calculateNextVersions(
 	// Check if the next tag is a stable release
 	const isNextStableRelease = isStableTag(nextTag);
 
-	for (const [projectPath] of Object.entries(branchInfo.projectUpdated)) {
+	for (const [projectPath, projectInfo] of Object.entries(
+		branchInfo.projectUpdated,
+	)) {
 		const project = config.projects.find((p) => p.path === projectPath);
 		if (!project) {
 			console.warn(`Warning: Project ${projectPath} not found in config`);
@@ -214,7 +216,7 @@ async function calculateNextVersions(
 		let newVersion: string;
 		if (isNextStableRelease) {
 			// For stable releases, no suffix - use the current workspace version without suffix
-			const currentWorkspaceVersion = branchInfo.projectUpdated[projectPath];
+			const currentWorkspaceVersion = projectInfo.version;
 			if (currentWorkspaceVersion) {
 				// Remove suffix from current version (e.g., "1.1.0-rc.0" -> "1.1.0")
 				const versionParts = currentWorkspaceVersion.split("-");
@@ -301,8 +303,14 @@ if (import.meta.vitest) {
 				tag: "alpha",
 				parentBranch: "main",
 				projectUpdated: {
-					"package-a": "1.0.1-alpha.20231225103045",
-					"package-b": "2.1.1-alpha.20231225103045",
+					"package-a": {
+						version: "1.0.1-alpha.20231225103045",
+						updatedAt: "2023-12-25T10:30:45.123Z",
+					},
+					"package-b": {
+						version: "2.1.1-alpha.20231225103045",
+						updatedAt: "2023-12-25T10:30:45.123Z",
+					},
 				},
 			};
 

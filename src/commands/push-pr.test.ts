@@ -264,8 +264,14 @@ describe("pushPrCommand", () => {
 				tag: "alpha",
 				parentBranch: "main",
 				projectUpdated: {
-					"package-a": "1.0.1-alpha.20231224103045", // patch already released (1.0.0 -> 1.0.1)
-					"package-b": "2.1.0-alpha.20231224103045", // minor already released (2.0.0 -> 2.1.0)
+					"package-a": {
+						version: "1.0.1-alpha.20231224103045",
+						updatedAt: "2023-12-24T10:30:45.123Z",
+					}, // patch already released (1.0.0 -> 1.0.1)
+					"package-b": {
+						version: "2.1.0-alpha.20231224103045",
+						updatedAt: "2023-12-24T10:30:45.123Z",
+					}, // minor already released (2.0.0 -> 2.1.0)
 				},
 			};
 			mockLoadBranchInfo.mockResolvedValue(branchInfoWithWorkspace);
@@ -298,8 +304,14 @@ describe("pushPrCommand", () => {
 				tag: "alpha",
 				parentBranch: "main",
 				projectUpdated: {
-					"package-a": "1.0.1-alpha.20231224103045", // patch already released
-					"package-b": "2.1.0-alpha.20231224103045", // minor already released
+					"package-a": {
+						version: "1.0.1-alpha.20231224103045",
+						updatedAt: "2023-12-24T10:30:45.123Z",
+					}, // patch already released
+					"package-b": {
+						version: "2.1.0-alpha.20231224103045",
+						updatedAt: "2023-12-24T10:30:45.123Z",
+					}, // minor already released
 				},
 			};
 			mockLoadBranchInfo.mockResolvedValue(branchInfoWithUpdates);

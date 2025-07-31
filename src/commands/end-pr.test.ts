@@ -146,8 +146,14 @@ const mockBranchInfo = {
 	tag: "alpha",
 	parentBranch: "main",
 	projectUpdated: {
-		"package-a": "1.0.1-alpha.20231225103045",
-		"package-b": "2.1.1-alpha.20231225103045",
+		"package-a": {
+			version: "1.0.1-alpha.20231225103045",
+			updatedAt: "2023-12-25T10:30:45.123Z",
+		},
+		"package-b": {
+			version: "2.1.1-alpha.20231225103045",
+			updatedAt: "2023-12-25T10:30:45.123Z",
+		},
 	},
 };
 
