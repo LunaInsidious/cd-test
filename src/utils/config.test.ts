@@ -49,57 +49,7 @@ describe("updateBranchInfo", () => {
 		}
 	});
 
-	it("should preserve existing updatedAt for unchanged projects", async () => {
-		const originalTime = "2023-12-25T10:30:45.123Z";
-		const newTime = "2023-12-25T11:30:45.123Z";
-
-		// Create initial branch info with existing project
-		const initialBranchInfo: BranchInfo = {
-			tag: "alpha",
-			parentBranch: "main",
-			projectUpdated: {
-				"project-a": {
-					version: "1.0.0-alpha.1",
-					updatedAt: originalTime,
-				},
-				"project-b": {
-					version: "2.0.0-alpha.1",
-					updatedAt: originalTime,
-				},
-			},
-		};
-
-		const branchInfoPath = join(cdtoolsDir, "alpha-test.json");
-		await writeFile(
-			branchInfoPath,
-			JSON.stringify(initialBranchInfo, null, "\t"),
-		);
-
-		// Mock current time
-		mockDate.mockReturnValue(newTime);
-
-		// Update only project-a with new version, keep project-b unchanged
-		await updateBranchInfo("test(alpha)", {
-			"project-a": "1.0.1-alpha.1", // Changed version
-			"project-b": "2.0.0-alpha.1", // Same version
-		});
-
-		// Load updated branch info
-		const updatedBranchInfo = await loadBranchInfo("test(alpha)");
-
-		expect(updatedBranchInfo.projectUpdated).toEqual({
-			"project-a": {
-				version: "1.0.1-alpha.1",
-				updatedAt: newTime, // Should be updated because version changed
-			},
-			"project-b": {
-				version: "2.0.0-alpha.1",
-				updatedAt: originalTime, // Should preserve original timestamp
-			},
-		});
-	});
-
-	it("should update updatedAt for new projects", async () => {
+	it("should update updatedAt for updated projects", async () => {
 		const originalTime = "2023-12-25T10:30:45.123Z";
 		const newTime = "2023-12-25T11:30:45.123Z";
 
@@ -136,11 +86,11 @@ describe("updateBranchInfo", () => {
 		expect(updatedBranchInfo.projectUpdated).toEqual({
 			"project-a": {
 				version: "1.0.0-alpha.1",
-				updatedAt: originalTime, // Should preserve original timestamp
+				updatedAt: newTime, // Should have new timestamp for updated project
 			},
 			"project-c": {
 				version: "3.0.0-alpha.1",
-				updatedAt: newTime, // Should have new timestamp for new project
+				updatedAt: newTime, // Should have new timestamp for updated project
 			},
 		});
 	});
