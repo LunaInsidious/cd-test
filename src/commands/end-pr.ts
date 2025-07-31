@@ -288,14 +288,14 @@ if (import.meta.vitest) {
 				projects: [
 					{
 						path: "package-a",
-						type: "npm" as const,
+						type: "typescript" as const,
 						baseVersion: "1.0.0",
 						deps: [],
 						registries: [],
 					},
 					{
 						path: "package-b",
-						type: "npm" as const,
+						type: "typescript" as const,
 						baseVersion: "2.1.0",
 						deps: [],
 						registries: [],

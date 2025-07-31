@@ -128,14 +128,14 @@ const mockConfig: Config = {
 	projects: [
 		{
 			path: "package-a",
-			type: "npm",
+			type: "typescript" as const,
 			baseVersion: "1.0.0",
 			deps: ["package.json"],
 			registries: ["npm"],
 		},
 		{
 			path: "package-b",
-			type: "npm",
+			type: "typescript" as const,
 			baseVersion: "2.1.0",
 			deps: ["package.json"],
 			registries: ["npm"],

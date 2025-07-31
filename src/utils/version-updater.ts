@@ -125,7 +125,7 @@ if (import.meta.vitest) {
 		it("should throw error for unsupported project type", async () => {
 			const unsupportedProject = {
 				path: "unknown-project",
-				type: "unknown",
+				type: "unknown" as ProjectType,
 				baseVersion: "1.0.0",
 				deps: [],
 				registries: [],
@@ -142,14 +142,14 @@ if (import.meta.vitest) {
 			const projects = [
 				{
 					path: "package-a",
-					type: "npm",
+					type: "typescript" as const,
 					baseVersion: "1.0.0",
 					deps: [],
 					registries: [],
 				},
 				{
 					path: "package-b",
-					type: "npm",
+					type: "typescript" as const,
 					baseVersion: "1.0.0",
 					deps: [],
 					registries: [],

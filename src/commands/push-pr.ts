@@ -588,14 +588,14 @@ if (import.meta.vitest) {
 					{
 						path: "package-a",
 						deps: ["package-a/package.json"],
-						type: "npm",
+						type: "typescript" as const,
 						baseVersion: "1.0.0",
 						registries: [],
 					},
 					{
 						path: "package-b",
 						deps: ["package-b/package.json"],
-						type: "npm",
+						type: "typescript" as const,
 						baseVersion: "1.0.0",
 						registries: [],
 					},
@@ -622,14 +622,14 @@ if (import.meta.vitest) {
 					{
 						path: "package-a",
 						deps: ["package-a/package.json"],
-						type: "npm",
+						type: "typescript" as const,
 						baseVersion: "1.0.0",
 						registries: [],
 					},
 					{
 						path: "package-b",
 						deps: ["package-b/package.json"],
-						type: "npm",
+						type: "typescript" as const,
 						baseVersion: "1.0.0",
 						registries: [],
 					},
@@ -656,7 +656,7 @@ if (import.meta.vitest) {
 					{
 						path: "package-a",
 						deps: ["package-a/package.json", "package-a/Dockerfile"],
-						type: "npm",
+						type: "typescript" as const,
 						baseVersion: "1.0.0",
 						registries: [],
 					},
@@ -682,14 +682,14 @@ if (import.meta.vitest) {
 					{
 						path: "package-a",
 						deps: ["package-a/package.json"],
-						type: "npm",
+						type: "typescript" as const,
 						baseVersion: "1.0.0",
 						registries: [],
 					},
 					{
 						path: "package-b",
 						deps: ["package-b/package.json"],
-						type: "npm",
+						type: "typescript" as const,
 						baseVersion: "1.0.0",
 						registries: [],
 					},
@@ -718,14 +718,14 @@ if (import.meta.vitest) {
 							"./packages/package-a/package.json",
 							"./packages/package-a/src",
 						],
-						type: "npm",
+						type: "typescript" as const,
 						baseVersion: "1.0.0",
 						registries: [],
 					},
 					{
 						path: "packages/package-b",
 						deps: ["packages/package-b/package.json"],
-						type: "npm",
+						type: "typescript" as const,
 						baseVersion: "1.0.0",
 						registries: [],
 					},
@@ -760,7 +760,7 @@ if (import.meta.vitest) {
 							"shared/config.json",
 							"apps/frontend/Dockerfile",
 						],
-						type: "npm",
+						type: "typescript" as const,
 						baseVersion: "1.0.0",
 						registries: [],
 					},
@@ -787,14 +787,14 @@ if (import.meta.vitest) {
 					{
 						path: "packages/lib",
 						deps: ["packages/lib/package.json", "packages/lib/build.config.js"],
-						type: "npm",
+						type: "typescript" as const,
 						baseVersion: "1.0.0",
 						registries: [],
 					},
 					{
 						path: "packages/lib-utils",
 						deps: ["packages/lib-utils/package.json"],
-						type: "npm",
+						type: "typescript" as const,
 						baseVersion: "1.0.0",
 						registries: [],
 					},
@@ -820,7 +820,7 @@ if (import.meta.vitest) {
 			const project = {
 				path: "package-a",
 				deps: ["shared/config.json", "package-a/package.json"],
-				type: "npm" as const,
+				type: "typescript" as const,
 				baseVersion: "1.0.0",
 				registries: [],
 			};
@@ -834,7 +834,7 @@ if (import.meta.vitest) {
 			const project = {
 				path: "package-a",
 				deps: ["shared/config.json", "package-a/package.json"],
-				type: "npm" as const,
+				type: "typescript" as const,
 				baseVersion: "1.0.0",
 				registries: [],
 			};
@@ -848,7 +848,7 @@ if (import.meta.vitest) {
 			const project = {
 				path: "package-a",
 				deps: ["shared/config.json", "package-a/package.json"],
-				type: "npm" as const,
+				type: "typescript" as const,
 				baseVersion: "1.0.0",
 				registries: [],
 			};
@@ -862,7 +862,7 @@ if (import.meta.vitest) {
 			const project = {
 				path: "./packages/lib",
 				deps: ["./shared/config.json", "./packages/lib/package.json"],
-				type: "npm" as const,
+				type: "typescript" as const,
 				baseVersion: "1.0.0",
 				registries: [],
 			};
