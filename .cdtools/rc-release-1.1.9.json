@@ -1,0 +1,10 @@
+{
+	"tag": "rc",
+	"parentBranch": "main",
+	"projectUpdated": {
+		".": {
+			"version": "1.1.9-rc.0",
+			"updatedAt": "2025-07-31T21:21:56.198Z"
+		}
+	}
+}

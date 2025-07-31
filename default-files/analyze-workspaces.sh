@@ -104,11 +104,11 @@ WORKSPACE_DATA=$(node -e "
     const npmWorkspaces = [];
     const dockerWorkspaces = [];
 
-    for (const [workspacePath, version] of Object.entries(branchInfo.projectUpdated)) {
+    for (const [workspacePath, projectInfo] of Object.entries(branchInfo.projectUpdated)) {
         const project = config.projects.find(p => p.path === workspacePath);
         if (!project) continue;
 
-        const workspaceInfo = { workspace_path: workspacePath, workspace_version: version };
+        const workspaceInfo = { workspace_path: workspacePath, workspace_version: projectInfo.version };
 
         if (project.registries.includes('npm')) {
             npmWorkspaces.push(workspaceInfo);

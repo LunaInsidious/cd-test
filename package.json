@@ -1,6 +1,6 @@
 {
 	"name": "cd-tools",
-	"version": "1.1.8",
+	"version": "1.1.9-rc.0",
 	"bin": {
 		"cd-tools": "dist/index.js"
 	},
@@ -13,26 +13,31 @@
 		"lint": "biome check",
 		"format": "biome format --write",
 		"build": "tsc --build",
-		"prebuild": "npm run lint && npm run format",
+		"prebuild": "npm run lint && npm run format && npx knip",
 		"test": "vitest --run",
 		"test:watch": "vitest --watch",
 		"test:coverage": "vitest --coverage",
 		"dev": "npm run build && node dist/index.js"
 	},
-	"keywords": [],
-	"author": "",
+	"keywords": [
+		"monorepo",
+		"cd",
+		"automation"
+	],
 	"license": "MIT",
 	"description": "CD (Continuous Deployment) tool for monorepo management",
 	"devDependencies": {
-		"@biomejs/biome": "2.1.2",
+		"@biomejs/biome": "^2.1.2",
 		"@types/node": "^22.15.2",
 		"@vitest/coverage-v8": "^3.2.4",
+		"knip": "^5.62.0",
 		"typescript": "^5.8.3"
 	},
 	"dependencies": {
+		"zod": "^4.0.10",
 		"@tsconfig/strictest": "^2.0.5",
-		"vitest": "^3.2.4",
-		"prompts": "2.4.2",
-		"@types/prompts": "2.4.9"
+		"@types/prompts": "^2.4.9",
+		"prompts": "^2.4.2",
+		"vitest": "^3.2.4"
 	}
 }

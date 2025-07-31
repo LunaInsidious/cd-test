@@ -1,64 +1,94 @@
-import { access, readdir, readFile, unlink, writeFile } from "node:fs/promises";
+import { readdir, readFile, unlink, writeFile } from "node:fs/promises";
 import path from "node:path";
+import { z } from "zod";
+import { isSystemError, NotFoundError, ValidationError } from "./error.js";
+
+export const LIB_DIR = ".cdtools";
+export const CONFIG_PATH = `${LIB_DIR}/config.json`;
+
+const constructBranchInfoPath = (
+	releaseMode: string,
+	branchName: string,
+): string => {
+	const escapedBranchName = escapeBranchNameForFilename(branchName);
+	return path.join(LIB_DIR, `${releaseMode}-${escapedBranchName}.json`);
+};
 
 /**
  * Configuration and branch tracking file utilities
  */
 
-export interface VersionTag {
-	[tagName: string]: {
-		versionSuffixStrategy: "timestamp" | "increment";
-		next?: string;
-	};
-}
+// Zod schemas
+const BumpTypeSchema = z.enum(["patch", "minor", "major"]);
+export type BumpType = z.infer<typeof BumpTypeSchema>;
 
-export type BumpType = "patch" | "minor" | "major";
-export type Registry = "npm" | "crates" | "docker";
+const RegistrySchema = z.enum(["npm", "crates", "docker"]);
 
-export interface Project {
-	path: string;
-	type: string;
-	baseVersion: string;
-	deps: string[];
-	registries: Registry[];
-}
+const VersionSuffixStrategySchema = z.enum(["timestamp", "increment"]);
 
-export interface Config {
-	versioningStrategy: "fixed" | "independent";
-	versionTags: VersionTag[];
-	projects: Project[];
-	releaseNotes?: {
-		enabled: boolean;
-		template: string;
-	};
-}
+const VersionTagValueSchema = z.object({
+	versionSuffixStrategy: VersionSuffixStrategySchema,
+	next: z.string().optional(),
+});
+type VersionTagValue = z.infer<typeof VersionTagValueSchema>;
 
-export interface BranchInfo {
-	tag: string;
-	parentBranch: string;
-	projectUpdated?: Record<string, string>;
-}
+const VersionTagSchema = z.record(z.string(), VersionTagValueSchema);
 
-/**
- * Check if cd-tools has been initialized
- */
-export async function checkInitialized(): Promise<boolean> {
-	try {
-		await access(".cdtools/config.json");
-		return true;
-	} catch {
-		return false;
-	}
-}
+const ProjectTypeSchema = z.enum(["typescript", "rust"]);
+export type ProjectType = z.infer<typeof ProjectTypeSchema>;
+
+const ProjectSchema = z.object({
+	path: z.string(),
+	type: ProjectTypeSchema,
+	baseVersion: z.string(),
+	deps: z.array(z.string()),
+	registries: z.array(RegistrySchema),
+});
+export type Project = z.infer<typeof ProjectSchema>;
+
+const ReleaseNotesSchema = z.object({
+	enabled: z.boolean(),
+	template: z.string(),
+});
+
+const ConfigSchema = z.object({
+	versioningStrategy: z.enum(["fixed", "independent"]),
+	versionTags: z.array(VersionTagSchema),
+	projects: z.array(ProjectSchema),
+	releaseNotes: ReleaseNotesSchema.optional(),
+});
+export type Config = z.infer<typeof ConfigSchema>;
+
+const ProjectUpdatedSchema = z.object({
+	version: z.string(),
+	updatedAt: z.iso.datetime(),
+});
+type ProjectUpdated = z.infer<typeof ProjectUpdatedSchema>;
+
+const BranchInfoSchema = z.object({
+	tag: z.string(),
+	parentBranch: z.string(),
+	projectUpdated: z.record(z.string(), ProjectUpdatedSchema).optional(),
+});
+export type BranchInfo = z.infer<typeof BranchInfoSchema>;
 
 /**
  * Load configuration file
  */
 export async function loadConfig(): Promise<Config> {
 	try {
-		const content = await readFile(".cdtools/config.json", "utf-8");
-		return JSON.parse(content) as Config;
+		const content = await readFile(CONFIG_PATH, "utf-8");
+		const data = JSON.parse(content);
+		return ConfigSchema.parse(data);
 	} catch (error) {
+		if (isSystemError(error) && error.code === "ENOENT") {
+			throw new NotFoundError("Configuration file not found.");
+		}
+		if (error instanceof z.ZodError) {
+			throw new ValidationError(
+				`Invalid configuration format: ${error.message}`,
+			);
+		}
 		throw new Error(
 			`Failed to load config: ${error instanceof Error ? error.message : String(error)}`,
 		);
@@ -69,7 +99,7 @@ export async function loadConfig(): Promise<Config> {
  * Escape branch name for use in filename
  * Replace characters that are not suitable for filenames
  */
-export function escapeBranchNameForFilename(branchName: string): string {
+function escapeBranchNameForFilename(branchName: string): string {
 	return branchName.replace(/[/\\:*?"<>|]/g, "-");
 }
 
@@ -81,8 +111,7 @@ export async function createBranchInfo(
 	branchName: string,
 	parentBranch: string,
 ): Promise<void> {
-	const escapedBranchName = escapeBranchNameForFilename(branchName);
-	const filename = `.cdtools/${releaseMode}-${escapedBranchName}.json`;
+	const branchInfoPath = constructBranchInfoPath(releaseMode, branchName);
 
 	const branchInfo: BranchInfo = {
 		tag: releaseMode,
@@ -90,7 +119,10 @@ export async function createBranchInfo(
 	};
 
 	try {
-		await writeFile(filename, `${JSON.stringify(branchInfo, null, "\t")}\n`);
+		await writeFile(
+			branchInfoPath,
+			`${JSON.stringify(branchInfo, null, "\t")}\n`,
+		);
 	} catch (error) {
 		throw new Error(
 			`Failed to create branch info file: ${error instanceof Error ? error.message : String(error)}`,
@@ -102,12 +134,13 @@ export async function createBranchInfo(
  * Parse current branch name to extract tag and original branch name
  * Format: branchName(tag) -> returns { branchName, tag }
  */
-export function parseBranchName(
-	fullBranchName: string,
-): { branchName: string; tag: string } | null {
+function parseBranchName(fullBranchName: string): {
+	branchName: string;
+	tag: string;
+} {
 	const match = fullBranchName.match(/^(.+)\(([^)]+)\)$/);
 	if (!match || !match[1] || !match[2]) {
-		return null;
+		throw new Error("Invalid branch name format. Expected 'branchName(tag)'.");
 	}
 	return {
 		branchName: match[1],
@@ -117,23 +150,32 @@ export function parseBranchName(
 
 /**
  * Load branch info file for current branch
+ * @param currentBranch - The current branch name
+ * @return Parsed BranchInfo object or null if not found
+ * @throws Error if branch info file invalid format
  */
 export async function loadBranchInfo(
 	currentBranch: string,
-): Promise<BranchInfo | null> {
-	const parsed = parseBranchName(currentBranch);
-	if (!parsed) {
-		return null;
-	}
-
-	const escapedBranchName = escapeBranchNameForFilename(parsed.branchName);
-	const filename = `.cdtools/${parsed.tag}-${escapedBranchName}.json`;
-
+): Promise<BranchInfo> {
 	try {
-		const content = await readFile(filename, "utf-8");
-		return JSON.parse(content) as BranchInfo;
-	} catch {
-		return null;
+		const parsed = parseBranchName(currentBranch);
+		const branchInfoPath = constructBranchInfoPath(
+			parsed.tag,
+			parsed.branchName,
+		);
+		const content = await readFile(branchInfoPath, "utf-8");
+		const data = JSON.parse(content);
+		return BranchInfoSchema.parse(data);
+	} catch (error) {
+		if (isSystemError(error) && error.code === "ENOENT") {
+			throw new NotFoundError("Branch info file not found.");
+		}
+		if (error instanceof z.ZodError) {
+			throw new ValidationError(`Invalid branch info format: ${error.message}`);
+		}
+		throw new Error(
+			`Failed to load branch info: ${error instanceof Error ? error.message : String(error)}`,
+		);
 	}
 }
 
@@ -150,10 +192,22 @@ export async function updateBranchInfo(
 		throw new Error("Branch info file not found");
 	}
 
+	const currentTime = new Date().toISOString();
+	// Convert projectUpdated to new format with updatedAt timestamp
+	const updatedProjectInfo: Record<string, ProjectUpdated> = Object.entries(
+		projectUpdated,
+	).reduce<Record<string, ProjectUpdated>>((acc, [projectPath, version]) => {
+		acc[projectPath] = {
+			version,
+			updatedAt: currentTime,
+		};
+		return acc;
+	}, {});
+
 	// Create new branch info object to avoid mutation
 	const updatedBranchInfo: BranchInfo = {
 		...branchInfo,
-		projectUpdated,
+		projectUpdated: updatedProjectInfo,
 		...(tag && { tag }),
 	};
 
@@ -162,12 +216,10 @@ export async function updateBranchInfo(
 		throw new Error("Invalid branch name format");
 	}
 
-	const escapedBranchName = escapeBranchNameForFilename(parsed.branchName);
-	const filename = `.cdtools/${parsed.tag}-${escapedBranchName}.json`;
-
+	const branchInfoPath = constructBranchInfoPath(parsed.tag, parsed.branchName);
 	try {
 		await writeFile(
-			filename,
+			branchInfoPath,
 			`${JSON.stringify(updatedBranchInfo, null, "\t")}\n`,
 		);
 	} catch (error) {
@@ -216,7 +268,7 @@ export function isStableTag(tagName: string): boolean {
 export function getVersionTagConfig(
 	config: Config,
 	tagName: string,
-): { versionSuffixStrategy: "timestamp" | "increment"; next?: string } | null {
+): VersionTagValue | null {
 	// Check if tag is directly defined in versionTags
 	for (const versionTag of config.versionTags) {
 		if (tagName in versionTag) {
@@ -283,40 +335,12 @@ export function compareVersions(
 }
 
 /**
- * Get the bump types that have occurred in this release cycle
- * @param config - The configuration
- * @param projectUpdated - The workspace updates from branch info
- * @returns Array of bump types that have occurred
- */
-export function getBumpTypesFromprojectUpdated(
-	config: Config,
-	projectUpdated: Record<string, string>,
-): BumpType[] {
-	const bumpTypes = new Set<BumpType>();
-
-	for (const [projectPath, currentVersion] of Object.entries(projectUpdated)) {
-		const project = config.projects.find((p) => p.path === projectPath);
-		if (!project) {
-			continue;
-		}
-
-		const bumpType = compareVersions(project.baseVersion, currentVersion);
-		if (bumpType) {
-			bumpTypes.add(bumpType);
-		}
-	}
-
-	return Array.from(bumpTypes);
-}
-
-/**
  * Update config.json with new project configurations
  * @param config - The updated configuration object
  */
 export async function updateConfig(config: Config): Promise<void> {
 	try {
-		const configPath = path.join(".cdtools", "config.json");
-		await writeFile(configPath, JSON.stringify(config, null, "\t"));
+		await writeFile(CONFIG_PATH, `${JSON.stringify(config, null, "\t")}\n`);
 	} catch (error) {
 		throw new Error(
 			`Failed to update configuration: ${error instanceof Error ? error.message : String(error)}`,
@@ -343,7 +367,7 @@ export async function deleteBranchInfo(currentBranch: string): Promise<void> {
 			.replace(/\(.*$/, ""); // Remove everything from opening parenthesis onwards
 
 		// Find existing branch info file
-		const files = await readdir(".cdtools");
+		const files = await readdir(LIB_DIR);
 		const branchInfoFile = files.find((file: string) => {
 			console.log(`Checking file: ${file}`);
 			const withoutExtension = file.replace(/\.json$/, "");
@@ -361,7 +385,7 @@ export async function deleteBranchInfo(currentBranch: string): Promise<void> {
 		console.log(`Deleting branch info file: ${branchInfoFile}`);
 
 		if (branchInfoFile) {
-			const branchInfoPath = path.join(".cdtools", branchInfoFile);
+			const branchInfoPath = path.join(LIB_DIR, branchInfoFile);
 			await unlink(branchInfoPath);
 		}
 	} catch (error) {

@@ -18,14 +18,22 @@
 			"path": "./frontend",
 			"type": "typescript",
 			"baseVersion": "1.0.0",
-			"deps": ["./backend", "package.json"],
-			"registries": ["npm"]
+			"deps": [
+				"./backend",
+				"package.json"
+			],
+			"registries": [
+				"npm"
+			]
 		},
 		{
 			"path": "./backend",
 			"type": "rust",
 			"baseVersion": "1.1.0",
-			"registries": ["crates"]
+			"deps": [],
+			"registries": [
+				"crates"
+			]
 		}
 	]
 }

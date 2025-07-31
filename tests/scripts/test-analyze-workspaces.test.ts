@@ -95,8 +95,14 @@ describe("analyze-workspaces.sh Script Tests", () => {
 				tag: "alpha",
 				parentBranch: "main",
 				projectUpdated: {
-					"packages/frontend": "1.0.1-alpha.20231225103045",
-					"packages/fullstack": "1.5.1-alpha.20231225103045",
+					"packages/frontend": {
+						version: "1.0.1-alpha.20231225103045",
+						updatedAt: "2023-12-25T10:30:45.123Z",
+					},
+					"packages/fullstack": {
+						version: "1.5.1-alpha.20231225103045",
+						updatedAt: "2023-12-25T10:30:45.123Z",
+					},
 				},
 			};
 
@@ -122,7 +128,10 @@ describe("analyze-workspaces.sh Script Tests", () => {
 				tag: "alpha",
 				parentBranch: "main",
 				projectUpdated: {
-					"packages/backend": "2.0.1-alpha.20231225103045",
+					"packages/backend": {
+						version: "2.0.1-alpha.20231225103045",
+						updatedAt: "2023-12-25T10:30:45.123Z",
+					},
 				},
 			};
 
@@ -147,8 +156,14 @@ describe("analyze-workspaces.sh Script Tests", () => {
 				tag: "alpha",
 				parentBranch: "main",
 				projectUpdated: {
-					"packages/backend": "2.0.1-alpha.20231225103045",
-					"packages/fullstack": "1.5.1-alpha.20231225103045",
+					"packages/backend": {
+						version: "2.0.1-alpha.20231225103045",
+						updatedAt: "2023-12-25T10:30:45.123Z",
+					},
+					"packages/fullstack": {
+						version: "1.5.1-alpha.20231225103045",
+						updatedAt: "2023-12-25T10:30:45.123Z",
+					},
 				},
 			};
 
@@ -176,7 +191,10 @@ describe("analyze-workspaces.sh Script Tests", () => {
 				tag: "alpha",
 				parentBranch: "main",
 				projectUpdated: {
-					"packages/frontend": "1.0.1-alpha.20231225103045",
+					"packages/frontend": {
+						version: "1.0.1-alpha.20231225103045",
+						updatedAt: "2023-12-25T10:30:45.123Z",
+					},
 				},
 			};
 
@@ -201,9 +219,18 @@ describe("analyze-workspaces.sh Script Tests", () => {
 				tag: "alpha",
 				parentBranch: "main",
 				projectUpdated: {
-					"packages/frontend": "1.0.1-alpha.20231225103045",
-					"packages/backend": "2.0.1-alpha.20231225103045",
-					"packages/fullstack": "1.5.1-alpha.20231225103045",
+					"packages/frontend": {
+						version: "1.0.1-alpha.20231225103045",
+						updatedAt: "2023-12-25T10:30:45.123Z",
+					},
+					"packages/backend": {
+						version: "2.0.1-alpha.20231225103045",
+						updatedAt: "2023-12-25T10:30:45.123Z",
+					},
+					"packages/fullstack": {
+						version: "1.5.1-alpha.20231225103045",
+						updatedAt: "2023-12-25T10:30:45.123Z",
+					},
 				},
 			};
 
@@ -242,7 +269,10 @@ describe("analyze-workspaces.sh Script Tests", () => {
 				tag: "alpha",
 				parentBranch: "main",
 				projectUpdated: {
-					"packages/frontend": "1.0.1-alpha.20231225103045",
+					"packages/frontend": {
+						version: "1.0.1-alpha.20231225103045",
+						updatedAt: "2023-12-25T10:30:45.123Z",
+					},
 				},
 			};
 			await writeFile(
@@ -302,7 +332,10 @@ describe("analyze-workspaces.sh Script Tests", () => {
 				tag: "alpha",
 				parentBranch: "main",
 				projectUpdated: {
-					"packages/frontend": "1.0.1-alpha.20231225103045",
+					"packages/frontend": {
+						version: "1.0.1-alpha.20231225103045",
+						updatedAt: "2023-12-25T10:30:45.123Z",
+					},
 				},
 			};
 
@@ -325,7 +358,10 @@ describe("analyze-workspaces.sh Script Tests", () => {
 				tag: "alpha",
 				parentBranch: "main",
 				projectUpdated: {
-					"packages/frontend": "1.0.1-alpha.20231225103045",
+					"packages/frontend": {
+						version: "1.0.1-alpha.20231225103045",
+						updatedAt: "2023-12-25T10:30:45.123Z",
+					},
 				},
 			};
 
@@ -350,7 +386,10 @@ describe("analyze-workspaces.sh Script Tests", () => {
 				tag: "alpha",
 				parentBranch: "main",
 				projectUpdated: {
-					"packages/frontend": "1.0.1-alpha.20231225103045",
+					"packages/frontend": {
+						version: "1.0.1-alpha.20231225103045",
+						updatedAt: "2023-12-25T10:30:45.123Z",
+					},
 				},
 			};
 

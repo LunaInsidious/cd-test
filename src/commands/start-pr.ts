@@ -1,17 +1,12 @@
 import prompts from "prompts";
-import {
-	type Config,
-	checkInitialized,
-	createBranchInfo,
-	getAvailableVersionTags,
-	loadConfig,
-} from "../utils/config.js";
+import { createBranchInfo, getAvailableVersionTags } from "../utils/config.js";
 import {
 	createAndCheckoutBranch,
 	getCurrentBranch,
 	pullLatest,
 	validateBranchName,
 } from "../utils/git.js";
+import { ensurePRInitConfig } from "./common.js";
 
 /**
  * Start a new release PR
@@ -28,13 +23,7 @@ export async function startPrCommand(): Promise<void> {
 	console.log("🚀 Starting new release PR...");
 
 	// Check if cd-tools has been initialized
-	const isInitialized = await checkInitialized();
-	if (!isInitialized) {
-		console.error(
-			"❌ cd-tools has not been initialized. Run 'cd-tools init' first.",
-		);
-		process.exit(1);
-	}
+	const config = await ensurePRInitConfig();
 
 	// Get current branch for pulling latest changes
 	const currentBranch = await getCurrentBranch();
@@ -48,17 +37,6 @@ export async function startPrCommand(): Promise<void> {
 	} catch (error) {
 		console.error(
 			`❌ Failed to pull latest changes: ${error instanceof Error ? error.message : String(error)}`,
-		);
-		process.exit(1);
-	}
-
-	// Load configuration
-	let config: Config;
-	try {
-		config = await loadConfig();
-	} catch (error) {
-		console.error(
-			`❌ Failed to load configuration: ${error instanceof Error ? error.message : String(error)}`,
 		);
 		process.exit(1);
 	}

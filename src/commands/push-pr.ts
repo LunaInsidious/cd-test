@@ -1,34 +1,33 @@
 import path from "node:path";
 import prompts from "prompts";
-// Remove vitest import to avoid conflicts with test files
 import {
 	type BranchInfo,
 	type BumpType,
 	type Config,
-	checkInitialized,
 	compareVersions,
 	getVersionTagConfig,
 	isStableTag,
-	loadBranchInfo,
-	loadConfig,
 	updateBranchInfo,
 	updateConfig,
 } from "../utils/config.js";
 import {
 	commitChanges,
+	fetchAndPruneBranches,
+	getAvailableBranches,
 	getChangedFiles,
 	getCurrentBranch,
-	getTagsMatchingPattern,
 	pushChanges,
 } from "../utils/git.js";
-import {
-	checkPrExists,
-	createPullRequestInteractive,
-} from "../utils/github.js";
+import { createPullRequest, getCurrentPrUrl } from "../utils/github.js";
 import {
 	getPackageName,
 	updateMultipleProjectVersions,
 } from "../utils/version-updater.js";
+import {
+	ensurePRInitConfig,
+	ensurePRStartBranchInfo,
+	generateVersionWithSuffix,
+} from "./common.js";
 
 /**
  * Update versions and create/update PR
@@ -46,36 +45,14 @@ import {
 export async function pushPrCommand(): Promise<void> {
 	console.log("🚀 Updating versions and creating PR...");
 
-	// Check if cd-tools has been initialized
-	const isInitialized = await checkInitialized();
-	if (!isInitialized) {
-		console.error(
-			"❌ cd-tools has not been initialized. Run 'cd-tools init' first.",
-		);
-		process.exit(1);
-	}
-
-	// Load configuration
-	let config: Config;
-	try {
-		config = await loadConfig();
-	} catch (error) {
-		console.error(
-			`❌ Failed to load configuration: ${error instanceof Error ? error.message : String(error)}`,
-		);
-		process.exit(1);
-	}
+	const config = await ensurePRInitConfig();
 
 	// Get current branch to find branch info file
 	const currentBranch = await getCurrentBranch();
 	console.log(`📂 Current branch: ${currentBranch}`);
 
 	// Check if start-pr has been executed by finding branch info file
-	const branchInfo = await loadBranchInfo(currentBranch);
-	if (!branchInfo) {
-		console.error("❌ No branch info found. Run 'cd-tools start-pr' first.");
-		process.exit(1);
-	}
+	const branchInfo = await ensurePRStartBranchInfo(currentBranch);
 
 	console.log(`🏷️  Release mode: ${branchInfo.tag}`);
 	console.log(`📁 Parent branch: ${branchInfo.parentBranch}`);
@@ -180,8 +157,8 @@ export async function pushPrCommand(): Promise<void> {
 		await pushChanges(currentBranch);
 
 		// Create PR if it doesn't exist
-		const prExists = await checkPrExists();
-		if (!prExists) {
+		const prUrl = await getCurrentPrUrl();
+		if (!prUrl) {
 			console.log("\n🔄 Creating pull request...");
 			const prTitle = `Release: ${versionEntries.join(", ")}`;
 
@@ -212,6 +189,67 @@ export async function pushPrCommand(): Promise<void> {
 	}
 
 	console.log("✅ Push PR completed successfully!");
+}
+
+/**
+ * Create a pull request with interactive base branch selection
+ * @param title - The PR title
+ * @param body - The PR body
+ * @param defaultBaseBranch - The default base branch to suggest
+ * @returns Pull request URL
+ * exits with error if PR creation fails
+ */
+async function createPullRequestInteractive(
+	title: string,
+	body: string,
+	defaultBaseBranch: string,
+): Promise<string> {
+	try {
+		// Fetch available branches and prune stale ones
+		await fetchAndPruneBranches();
+		// Get available branches and current branch
+		const [availableBranches, currentBranch] = await Promise.all([
+			getAvailableBranches(),
+			getCurrentBranch(),
+		]);
+
+		// Filter out current branch and add "Create new branch" option
+		const branchChoices = availableBranches
+			.filter(
+				(branch) => branch !== currentBranch && branch !== defaultBaseBranch,
+			)
+			.map((branch) => ({ title: branch, value: branch }));
+
+		// Add default base branch option
+		if (availableBranches.some((branch) => branch === defaultBaseBranch)) {
+			branchChoices.unshift({
+				title: `${defaultBaseBranch} (default)`,
+				value: defaultBaseBranch,
+			});
+		}
+
+		const response = await prompts({
+			type: "select",
+			name: "baseBranch",
+			message: "Select base branch for the pull request:",
+			choices: branchChoices,
+			initial: 0, // Default to first option (default branch)
+		});
+
+		const baseBranch = response.baseBranch;
+
+		if (!baseBranch) {
+			throw new Error("No base branch selected");
+		}
+
+		// Create the PR with selected base branch
+		return await createPullRequest(title, body, baseBranch);
+	} catch (error) {
+		console.log(
+			`Failed to create pull request: ${error instanceof Error ? error.message : String(error)}`,
+		);
+		process.exit(1);
+	}
 }
 
 /**
@@ -321,16 +359,17 @@ async function calculateNewVersions(
 		}
 
 		// Check if this bump type or smaller has already been released for this specific project
-		const currentProjectVersion = branchInfo.projectUpdated?.[project.path];
+		const currentProjectInfo = branchInfo.projectUpdated?.[project.path];
 		let projectBumpType: BumpType | null = null;
-		if (currentProjectVersion) {
+		if (currentProjectInfo) {
 			projectBumpType = compareVersions(
 				project.baseVersion,
-				currentProjectVersion,
+				currentProjectInfo.version,
 			);
 		}
 
-		const hasBeenReleased = projectBumpType
+		// Check if a higher bump type has been released
+		const hasBumpBeenReleased = projectBumpType
 			? hasVersionBumpBeenReleased([projectBumpType], selectedBump)
 			: false;
 
@@ -340,12 +379,12 @@ async function calculateNewVersions(
 			// For stable releases, no suffix - just the base version with bump applied
 			const newBaseVersion = bumpVersion(project.baseVersion, selectedBump);
 			newVersion = newBaseVersion;
-		} else if (hasBeenReleased && currentProjectVersion) {
-			// Use the existing projectUpdated version, just update suffix
-			const existingVersionBase = currentProjectVersion.split("-")[0];
+		} else if (hasBumpBeenReleased && currentProjectInfo) {
+			// If the same or higher bump was already released, keep the existing version with updated suffix
+			const existingVersionBase = currentProjectInfo.version.split("-")[0];
 			if (!existingVersionBase) {
 				throw new Error(
-					`Invalid version format in projectUpdated: ${currentProjectVersion}`,
+					`Invalid version format in projectUpdated: ${currentProjectInfo.version}`,
 				);
 			}
 			newVersion = await generateVersionWithSuffix(
@@ -353,15 +392,11 @@ async function calculateNewVersions(
 				branchInfo.tag,
 				currentVersionTag.versionSuffixStrategy,
 			);
-		} else if (hasBeenReleased) {
-			// No workspace version but bump already released, use base version
-			newVersion = await generateVersionWithSuffix(
-				project.baseVersion,
-				branchInfo.tag,
-				currentVersionTag.versionSuffixStrategy,
-			);
 		} else {
 			// Apply bump and generate new version
+			// This covers both cases:
+			// 1. No previous bump was released
+			// 2. A smaller bump was released but user wants a larger bump
 			const newBaseVersion = bumpVersion(project.baseVersion, selectedBump);
 			newVersion = await generateVersionWithSuffix(
 				newBaseVersion,
@@ -541,99 +576,6 @@ function determineProjectsToUpdate(
 	return Array.from(projectsToUpdate);
 }
 
-/**
- * Escape special regex characters in a string
- * @param str - String to escape
- * @returns Escaped string safe for use in regex
- */
-function escapeRegexMetaCharacters(str: string): string {
-	return str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-}
-
-/**
- * Generate version string with appropriate suffix
- * @param baseVersion - The base version (e.g., "1.0.0")
- * @param tag - The version tag (e.g., "alpha", "rc")
- * @param strategy - The suffix strategy ("timestamp" or "increment")
- * @returns Promise resolving to the versioned string
- */
-async function generateVersionWithSuffix(
-	baseVersion: string,
-	tag: string,
-	strategy: "timestamp" | "increment",
-): Promise<string> {
-	if (strategy === "timestamp") {
-		const now = new Date();
-		const timestamp = now
-			.toISOString()
-			.replace(/[-:T]/g, "")
-			.replace(/\.\d{3}Z$/, "")
-			.slice(0, 14); // YYYYMMDDhhmmss
-		return `${baseVersion}-${tag}.${timestamp}`;
-	} else {
-		// increment strategy - check existing tags to find the next increment
-		const nextIncrement = await getNextIncrement(baseVersion, tag);
-		return `${baseVersion}-${tag}.${nextIncrement}`;
-	}
-}
-
-/**
- * Extract increment numbers from existing tags
- * @param existingTags - Array of existing git tags
- * @param baseVersion - The base version to check
- * @param tag - The tag name to check
- * @returns Next increment number
- */
-export function getNextIncrementFromTags(
-	existingTags: string[],
-	baseVersion: string,
-	tag: string,
-): number {
-	// Create regex pattern to match version tags with increment numbers
-	// Supports both formats: "1.0.0-alpha.0" and "library-name-1.0.0-alpha.0"
-	const escapedBaseVersion = escapeRegexMetaCharacters(baseVersion);
-	const escapedTag = escapeRegexMetaCharacters(tag);
-	const incrementRegex = new RegExp(
-		`^(?:.*-)?v?${escapedBaseVersion}-${escapedTag}\\.(\\d+)$`,
-	);
-
-	// Extract increment numbers from matching tags
-	const increments = existingTags
-		.map((tagName) => {
-			const match = tagName.match(incrementRegex);
-			return match?.[1] ? parseInt(match[1], 10) : -1;
-		})
-		.filter((num) => num >= 0);
-
-	// Return next increment (highest + 1, or 0 if none exist)
-	return increments.length > 0 ? Math.max(...increments) + 1 : 0;
-}
-
-/**
- * Get the next increment number for a given base version and tag
- * Checks existing git tags to find the highest increment and returns next
- * @param baseVersion - The base version to check (e.g., "1.0.0")
- * @param tag - The tag name to check (e.g., "alpha", "rc")
- * @returns Promise resolving to the next increment number
- */
-async function getNextIncrement(
-	baseVersion: string,
-	tag: string,
-): Promise<number> {
-	try {
-		// Look for tags like "1.0.0-alpha.0", "1.0.0-alpha.1", "lib-1.0.0-alpha.0", etc.
-		const tagPattern = `*${baseVersion}-${tag}.*`;
-		const existingTags = await getTagsMatchingPattern(tagPattern);
-		return getNextIncrementFromTags(existingTags, baseVersion, tag);
-	} catch (error) {
-		// If git tag lookup fails, default to 0
-		console.warn(
-			`Warning: Could not check existing tags for ${baseVersion}-${tag}: ${error instanceof Error ? error.message : String(error)}`,
-		);
-		return 0;
-	}
-}
-
 if (import.meta.vitest) {
 	const { expect, it, describe } = import.meta.vitest;
 
@@ -673,32 +615,6 @@ if (import.meta.vitest) {
 		});
 	});
 
-	describe("generateVersionWithSuffix", () => {
-		it("should generate timestamp versions", async () => {
-			const result = await generateVersionWithSuffix(
-				"1.0.0",
-				"alpha",
-				"timestamp",
-			);
-			expect(result).toMatch(/^1\.0\.0-alpha\.\d{14}$/);
-		});
-
-		it("should generate increment versions", () => {
-			// Test the getNextIncrementFromTags function directly
-			const existingTags = ["1.0.0-alpha.0", "1.0.0-alpha.1", "1.0.0-alpha.2"];
-
-			// Should return 0 for rc since no rc tags exist
-			expect(getNextIncrementFromTags(existingTags, "1.0.0", "rc")).toBe(0);
-
-			// Should return 3 for alpha since alpha.0, alpha.1, alpha.2 exist
-			expect(getNextIncrementFromTags(existingTags, "1.0.0", "alpha")).toBe(3);
-
-			// Test with library prefix
-			const libTags = ["mylib-1.0.0-rc.0", "mylib-1.0.0-rc.1"];
-			expect(getNextIncrementFromTags(libTags, "1.0.0", "rc")).toBe(2);
-		});
-	});
-
 	describe("getCurrentVersionTag", () => {
 		it("should find version tag configuration", () => {
 			const config = {
@@ -729,14 +645,14 @@ if (import.meta.vitest) {
 					{
 						path: "package-a",
 						deps: ["package-a/package.json"],
-						type: "npm",
+						type: "typescript" as const,
 						baseVersion: "1.0.0",
 						registries: [],
 					},
 					{
 						path: "package-b",
 						deps: ["package-b/package.json"],
-						type: "npm",
+						type: "typescript" as const,
 						baseVersion: "1.0.0",
 						registries: [],
 					},
@@ -763,14 +679,14 @@ if (import.meta.vitest) {
 					{
 						path: "package-a",
 						deps: ["package-a/package.json"],
-						type: "npm",
+						type: "typescript" as const,
 						baseVersion: "1.0.0",
 						registries: [],
 					},
 					{
 						path: "package-b",
 						deps: ["package-b/package.json"],
-						type: "npm",
+						type: "typescript" as const,
 						baseVersion: "1.0.0",
 						registries: [],
 					},
@@ -797,7 +713,7 @@ if (import.meta.vitest) {
 					{
 						path: "package-a",
 						deps: ["package-a/package.json", "package-a/Dockerfile"],
-						type: "npm",
+						type: "typescript" as const,
 						baseVersion: "1.0.0",
 						registries: [],
 					},
@@ -823,14 +739,14 @@ if (import.meta.vitest) {
 					{
 						path: "package-a",
 						deps: ["package-a/package.json"],
-						type: "npm",
+						type: "typescript" as const,
 						baseVersion: "1.0.0",
 						registries: [],
 					},
 					{
 						path: "package-b",
 						deps: ["package-b/package.json"],
-						type: "npm",
+						type: "typescript" as const,
 						baseVersion: "1.0.0",
 						registries: [],
 					},
@@ -859,14 +775,14 @@ if (import.meta.vitest) {
 							"./packages/package-a/package.json",
 							"./packages/package-a/src",
 						],
-						type: "npm",
+						type: "typescript" as const,
 						baseVersion: "1.0.0",
 						registries: [],
 					},
 					{
 						path: "packages/package-b",
 						deps: ["packages/package-b/package.json"],
-						type: "npm",
+						type: "typescript" as const,
 						baseVersion: "1.0.0",
 						registries: [],
 					},
@@ -901,7 +817,7 @@ if (import.meta.vitest) {
 							"shared/config.json",
 							"apps/frontend/Dockerfile",
 						],
-						type: "npm",
+						type: "typescript" as const,
 						baseVersion: "1.0.0",
 						registries: [],
 					},
@@ -928,14 +844,14 @@ if (import.meta.vitest) {
 					{
 						path: "packages/lib",
 						deps: ["packages/lib/package.json", "packages/lib/build.config.js"],
-						type: "npm",
+						type: "typescript" as const,
 						baseVersion: "1.0.0",
 						registries: [],
 					},
 					{
 						path: "packages/lib-utils",
 						deps: ["packages/lib-utils/package.json"],
-						type: "npm",
+						type: "typescript" as const,
 						baseVersion: "1.0.0",
 						registries: [],
 					},
@@ -961,7 +877,7 @@ if (import.meta.vitest) {
 			const project = {
 				path: "package-a",
 				deps: ["shared/config.json", "package-a/package.json"],
-				type: "npm" as const,
+				type: "typescript" as const,
 				baseVersion: "1.0.0",
 				registries: [],
 			};
@@ -975,7 +891,7 @@ if (import.meta.vitest) {
 			const project = {
 				path: "package-a",
 				deps: ["shared/config.json", "package-a/package.json"],
-				type: "npm" as const,
+				type: "typescript" as const,
 				baseVersion: "1.0.0",
 				registries: [],
 			};
@@ -989,7 +905,7 @@ if (import.meta.vitest) {
 			const project = {
 				path: "package-a",
 				deps: ["shared/config.json", "package-a/package.json"],
-				type: "npm" as const,
+				type: "typescript" as const,
 				baseVersion: "1.0.0",
 				registries: [],
 			};
@@ -1003,7 +919,7 @@ if (import.meta.vitest) {
 			const project = {
 				path: "./packages/lib",
 				deps: ["./shared/config.json", "./packages/lib/package.json"],
-				type: "npm" as const,
+				type: "typescript" as const,
 				baseVersion: "1.0.0",
 				registries: [],
 			};

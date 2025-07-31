@@ -127,7 +127,7 @@ describe("initCommand", () => {
 			await expect(initCommand()).rejects.toThrow("process.exit called");
 
 			expect(console.error).toHaveBeenCalledWith(
-				"❌ Failed to create .cdtools directory:",
+				"❌ Failed to create cdtools directory:",
 				expect.any(Error),
 			);
 			expect(process.exit).toHaveBeenCalledWith(1);

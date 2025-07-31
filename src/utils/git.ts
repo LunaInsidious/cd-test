@@ -3,7 +3,7 @@ import { spawn } from "node:child_process";
 /**
  * Git utility functions for branch operations
  */
-export class GitError extends Error {
+class GitError extends Error {
 	constructor(
 		message: string,
 		public readonly command: string,
@@ -188,12 +188,30 @@ export async function pushChanges(branchName: string): Promise<void> {
 }
 
 /**
- * Get list of available branches (local and remote)
+ * Fetch remote branches and prune deleted ones
+ * If an error occurs, it throws a GitError
+ * @throws {GitError} If git command fails
+ */
+export async function fetchAndPruneBranches(): Promise<void> {
+	try {
+		await execGit(["fetch", "--prune"]);
+	} catch (error) {
+		throw new GitError(
+			`Failed to fetch and prune branches: ${error instanceof Error ? error.message : String(error)}`,
+			`git fetch --prune`,
+		);
+	}
+}
+
+/**
+ * Get a list of all available branches
+ * Returns an array of branch names, excluding remote prefixes
+ * @returns Array of branch names
+ * If an error occurs, it throws a GitError
+ * @throws {GitError} If git command fails
  */
 export async function getAvailableBranches(): Promise<string[]> {
 	try {
-		// remove remote tracking branches(deleted on remote)
-		await execGit(["fetch", "--prune"]);
 		const output = await execGit(["branch", "-a", "--format=%(refname:short)"]);
 		return output
 			.split("\n")
