@@ -158,8 +158,8 @@ export async function pushPrCommand(): Promise<void> {
 		await pushChanges(currentBranch);
 
 		// Create PR if it doesn't exist
-		const prExists = await checkPrExists();
-		if (!prExists) {
+		const prUrl = await getCurrentPrUrl();
+		if (!prUrl) {
 			console.log("\n🔄 Creating pull request...");
 			const prTitle = `Release: ${versionEntries.join(", ")}`;
 
@@ -190,6 +190,85 @@ export async function pushPrCommand(): Promise<void> {
 	}
 
 	console.log("✅ Push PR completed successfully!");
+}
+
+/**
+ * Create a pull request with interactive base branch selection
+ * @param title - The PR title
+ * @param body - The PR body
+ * @param defaultBaseBranch - The default base branch to suggest
+ * @returns Pull request URL
+ * exits with error if PR creation fails
+ */
+async function createPullRequestInteractive(
+	title: string,
+	body: string,
+	defaultBaseBranch: string,
+): Promise<string> {
+	try {
+		// Get available branches and current branch
+		const [availableBranches, currentBranch] = await Promise.all([
+			getAvailableBranches(),
+			getCurrentBranch(),
+		]);
+
+		// Filter out current branch and add "Create new branch" option
+		const branchChoices = availableBranches
+			.filter(
+				(branch) => branch !== currentBranch && branch !== defaultBaseBranch,
+			)
+			.map((branch) => ({ title: branch, value: branch }));
+
+		// Add default base branch option
+		if (availableBranches.some((branch) => branch === defaultBaseBranch)) {
+			branchChoices.unshift({
+				title: `${defaultBaseBranch} (default)`,
+				value: defaultBaseBranch,
+			});
+		}
+
+		// Add new branch creation option
+		branchChoices.push({ title: "Create new branch...", value: "__new__" });
+
+		const response = await prompts({
+			type: "select",
+			name: "baseBranch",
+			message: "Select base branch for the pull request:",
+			choices: branchChoices,
+			initial: 0, // Default to first option (default branch)
+		});
+
+		if (!response.baseBranch) {
+			throw new Error("No base branch selected");
+		}
+
+		let baseBranch = response.baseBranch;
+
+		// Handle new branch creation
+		if (baseBranch === "__new__") {
+			const newBranchResponse = await prompts({
+				type: "text",
+				name: "newBranch",
+				message: "Enter new branch name:",
+				validate: (value: string) =>
+					value.trim().length > 0 || "Branch name cannot be empty",
+			});
+
+			if (!newBranchResponse.newBranch) {
+				throw new Error("No branch name provided");
+			}
+
+			baseBranch = newBranchResponse.newBranch.trim();
+		}
+
+		// Create the PR with selected base branch
+		return await createPullRequest(title, body, baseBranch);
+	} catch (error) {
+		console.log(
+			`Failed to create pull request: ${error instanceof Error ? error.message : String(error)}`,
+		);
+		process.exit(1);
+	}
 }
 
 /**
