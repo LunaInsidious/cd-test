@@ -5,39 +5,53 @@ import path from "node:path";
  * Configuration and branch tracking file utilities
  */
 
-export interface VersionTag {
-	[tagName: string]: {
-		versionSuffixStrategy: "timestamp" | "increment";
-		next?: string;
-	};
-}
+// Zod schemas
+const BumpTypeSchema = z.enum(["patch", "minor", "major"]);
+export type BumpType = z.infer<typeof BumpTypeSchema>;
 
-export type BumpType = "patch" | "minor" | "major";
-export type Registry = "npm" | "crates" | "docker";
+const RegistrySchema = z.enum(["npm", "crates", "docker"]);
 
-export interface Project {
-	path: string;
-	type: string;
-	baseVersion: string;
-	deps: string[];
-	registries: Registry[];
-}
+const VersionSuffixStrategySchema = z.enum(["timestamp", "increment"]);
 
-export interface Config {
-	versioningStrategy: "fixed" | "independent";
-	versionTags: VersionTag[];
-	projects: Project[];
-	releaseNotes?: {
-		enabled: boolean;
-		template: string;
-	};
-}
+export const VersionTagValueSchema = z.object({
+	versionSuffixStrategy: VersionSuffixStrategySchema,
+	next: z.string().optional(),
+});
+type VersionTagValue = z.infer<typeof VersionTagValueSchema>;
 
-export interface BranchInfo {
-	tag: string;
-	parentBranch: string;
-	projectUpdated?: Record<string, string>;
-}
+const VersionTagSchema = z.record(z.string(), VersionTagValueSchema);
+
+const ProjectTypeSchema = z.enum(["typescript", "rust"]);
+export type ProjectType = z.infer<typeof ProjectTypeSchema>;
+
+const ProjectSchema = z.object({
+	path: z.string(),
+	type: ProjectTypeSchema,
+	baseVersion: z.string(),
+	deps: z.array(z.string()),
+	registries: z.array(RegistrySchema),
+});
+export type Project = z.infer<typeof ProjectSchema>;
+
+const ReleaseNotesSchema = z.object({
+	enabled: z.boolean(),
+	template: z.string(),
+});
+
+const ConfigSchema = z.object({
+	versioningStrategy: z.enum(["fixed", "independent"]),
+	versionTags: z.array(VersionTagSchema),
+	projects: z.array(ProjectSchema),
+	releaseNotes: ReleaseNotesSchema.optional(),
+});
+export type Config = z.infer<typeof ConfigSchema>;
+
+const BranchInfoSchema = z.object({
+	tag: z.string(),
+	parentBranch: z.string(),
+	projectUpdated: z.record(z.string(), z.string()).optional(),
+});
+export type BranchInfo = z.infer<typeof BranchInfoSchema>;
 
 /**
  * Check if cd-tools has been initialized
