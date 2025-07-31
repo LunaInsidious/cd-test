@@ -42,52 +42,19 @@ import {
 export async function endPrCommand(): Promise<void> {
 	console.log("🏁 Finalizing and merging PR...");
 
-	// Check if cd-tools has been initialized
-	const isInitialized = await checkInitialized();
-	if (!isInitialized) {
-		console.error(
-			"❌ cd-tools has not been initialized. Run 'cd-tools init' first.",
-		);
-		process.exit(1);
-	}
-
-	// Load configuration
-	let config: Config;
-	try {
-		config = await loadConfig();
-	} catch (error) {
-		console.error(
-			`❌ Failed to load configuration: ${error instanceof Error ? error.message : String(error)}`,
-		);
-		process.exit(1);
-	}
+	const config = await ensurePRInitConfig();
 
 	// Get current branch to find branch info file
 	const currentBranch = await getCurrentBranch();
 	console.log(`📂 Current branch: ${currentBranch}`);
 
 	// Check if start-pr has been executed by finding branch info file
-	const branchInfo = await loadBranchInfo(currentBranch);
-	if (!branchInfo) {
-		console.error("❌ No branch info found. Run 'cd-tools start-pr' first.");
-		process.exit(1);
-	}
+	const branchInfo = await ensurePRStartBranchInfo(currentBranch);
 
 	console.log(`🏷️  Release mode: ${branchInfo.tag}`);
 	console.log(`📁 Parent branch: ${branchInfo.parentBranch}`);
 
-	// Check if PR has been created
-	const prExists = await checkPrExists();
-	if (!prExists) {
-		console.error("❌ No pull request found. Run 'cd-tools push-pr' first.");
-		process.exit(1);
-	}
-
-	const prUrl = await getCurrentPrUrl();
-	if (!prUrl) {
-		console.error("❌ Could not get pull request URL.");
-		process.exit(1);
-	}
+	const prUrl = await ensurePRExists();
 	console.log(`📋 Pull request URL: ${prUrl}`);
 
 	// 本当にマージするか確認を入れる
@@ -277,99 +244,6 @@ async function calculateNextVersions(
 	return result;
 }
 
-/**
- * Escape special regex characters in a string
- * @param str - String to escape
- * @returns Escaped string safe for use in regex
- */
-function escapeRegexMetaCharacters(str: string): string {
-	return str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-}
-
-/**
- * Generate version string with appropriate suffix
- * @param baseVersion - The base version (e.g., "1.0.0")
- * @param tag - The version tag (e.g., "alpha", "rc")
- * @param strategy - The suffix strategy ("timestamp" or "increment")
- * @returns Promise resolving to the versioned string
- */
-async function generateVersionWithSuffix(
-	baseVersion: string,
-	tag: string,
-	strategy: "timestamp" | "increment",
-): Promise<string> {
-	if (strategy === "timestamp") {
-		const now = new Date();
-		const timestamp = now
-			.toISOString()
-			.replace(/[-:T]/g, "")
-			.replace(/\.\d{3}Z$/, "")
-			.slice(0, 14); // YYYYMMDDhhmmss
-		return `${baseVersion}-${tag}.${timestamp}`;
-	} else {
-		// increment strategy - check existing tags to find the next increment
-		const nextIncrement = await getNextIncrement(baseVersion, tag);
-		return `${baseVersion}-${tag}.${nextIncrement}`;
-	}
-}
-
-/**
- * Extract increment numbers from existing tags
- * @param existingTags - Array of existing git tags
- * @param baseVersion - The base version to check
- * @param tag - The tag name to check
- * @returns Next increment number
- */
-export function getNextIncrementFromTags(
-	existingTags: string[],
-	baseVersion: string,
-	tag: string,
-): number {
-	// Create regex pattern to match version tags with increment numbers
-	// Supports both formats: "1.0.0-alpha.0" and "library-name-1.0.0-alpha.0"
-	const escapedBaseVersion = escapeRegexMetaCharacters(baseVersion);
-	const escapedTag = escapeRegexMetaCharacters(tag);
-	const incrementRegex = new RegExp(
-		`^(?:.*-)?${escapedBaseVersion}-${escapedTag}\\.(\\d+)$`,
-	);
-
-	// Extract increment numbers from matching tags
-	const increments = existingTags
-		.map((tagName) => {
-			const match = tagName.match(incrementRegex);
-			return match?.[1] ? parseInt(match[1], 10) : -1;
-		})
-		.filter((num) => num >= 0);
-
-	// Return next increment (highest + 1, or 0 if none exist)
-	return increments.length > 0 ? Math.max(...increments) + 1 : 0;
-}
-
-/**
- * Get the next increment number for a given base version and tag
- * Checks existing git tags to find the highest increment and returns next
- * @param baseVersion - The base version to check (e.g., "1.0.0")
- * @param tag - The tag name to check (e.g., "alpha", "rc")
- * @returns Promise resolving to the next increment number
- */
-async function getNextIncrement(
-	baseVersion: string,
-	tag: string,
-): Promise<number> {
-	try {
-		// Look for tags like "1.0.0-alpha.0", "1.0.0-alpha.1", "lib-1.0.0-alpha.0", etc.
-		const tagPattern = `*${baseVersion}-${tag}.*`;
-		const existingTags = await getTagsMatchingPattern(tagPattern);
-		return getNextIncrementFromTags(existingTags, baseVersion, tag);
-	} catch (error) {
-		// If git tag lookup fails, default to 0
-		console.warn(
-			`Warning: Could not check existing tags for ${baseVersion}-${tag}: ${error instanceof Error ? error.message : String(error)}`,
-		);
-		return 0;
-	}
-}
-
 if (import.meta.vitest) {
 	const { expect, it, describe, vi } = import.meta.vitest;
 
@@ -475,31 +349,6 @@ if (import.meta.vitest) {
 			);
 
 			expect(result).toEqual({});
-		});
-	});
-
-	describe("generateVersionWithSuffix", () => {
-		it("should generate timestamp versions", async () => {
-			const result = await generateVersionWithSuffix(
-				"1.0.0",
-				"rc",
-				"timestamp",
-			);
-			expect(result).toMatch(/^1\.0\.0-rc\.\d{14}$/);
-		});
-
-		it("should generate increment versions", () => {
-			// Test the getNextIncrementFromTags function directly
-			const existingTags = ["1.0.0-alpha.0", "1.0.0-alpha.1", "1.0.0-rc.0"];
-
-			// Should return 1 for rc since rc.0 exists
-			expect(getNextIncrementFromTags(existingTags, "1.0.0", "rc")).toBe(1);
-
-			// Should return 2 for alpha since alpha.0 and alpha.1 exist
-			expect(getNextIncrementFromTags(existingTags, "1.0.0", "alpha")).toBe(2);
-
-			// Test empty tags
-			expect(getNextIncrementFromTags([], "2.0.0", "beta")).toBe(0);
 		});
 	});
 }
