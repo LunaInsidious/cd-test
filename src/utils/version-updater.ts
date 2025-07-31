@@ -1,5 +1,5 @@
 import { readFile, writeFile } from "node:fs/promises";
-import type { Project } from "./config.js";
+import type { Project, ProjectType } from "./config.js";
 
 /**
  * Version file update utilities for different project types
@@ -8,7 +8,7 @@ import type { Project } from "./config.js";
 /**
  * Update version in package.json file
  */
-export async function updateNpmVersion(
+async function updateNpmVersion(
 	projectPath: string,
 	newVersion: string,
 ): Promise<void> {
@@ -34,7 +34,7 @@ export async function updateNpmVersion(
 /**
  * Update version in Cargo.toml file (for future Rust support)
  */
-export async function updateRustVersion(
+async function updateRustVersion(
 	projectPath: string,
 	newVersion: string,
 ): Promise<void> {
@@ -60,7 +60,7 @@ export async function updateRustVersion(
 /**
  * Update version file based on project type
  */
-export async function updateProjectVersion(
+async function updateProjectVersion(
 	project: Project,
 	newVersion: string,
 ): Promise<void> {

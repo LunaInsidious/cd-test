@@ -83,7 +83,7 @@ export async function loadConfig(): Promise<Config> {
  * Escape branch name for use in filename
  * Replace characters that are not suitable for filenames
  */
-export function escapeBranchNameForFilename(branchName: string): string {
+function escapeBranchNameForFilename(branchName: string): string {
 	return branchName.replace(/[/\\:*?"<>|]/g, "-");
 }
 
@@ -116,12 +116,13 @@ export async function createBranchInfo(
  * Parse current branch name to extract tag and original branch name
  * Format: branchName(tag) -> returns { branchName, tag }
  */
-export function parseBranchName(
-	fullBranchName: string,
-): { branchName: string; tag: string } | null {
+function parseBranchName(fullBranchName: string): {
+	branchName: string;
+	tag: string;
+} {
 	const match = fullBranchName.match(/^(.+)\(([^)]+)\)$/);
 	if (!match || !match[1] || !match[2]) {
-		return null;
+		throw new Error("Invalid branch name format. Expected 'branchName(tag)'.");
 	}
 	return {
 		branchName: match[1],
@@ -230,7 +231,7 @@ export function isStableTag(tagName: string): boolean {
 export function getVersionTagConfig(
 	config: Config,
 	tagName: string,
-): { versionSuffixStrategy: "timestamp" | "increment"; next?: string } | null {
+): VersionTagValue | null {
 	// Check if tag is directly defined in versionTags
 	for (const versionTag of config.versionTags) {
 		if (tagName in versionTag) {
@@ -294,33 +295,6 @@ export function compareVersions(
 	}
 
 	return null; // No change
-}
-
-/**
- * Get the bump types that have occurred in this release cycle
- * @param config - The configuration
- * @param projectUpdated - The workspace updates from branch info
- * @returns Array of bump types that have occurred
- */
-export function getBumpTypesFromprojectUpdated(
-	config: Config,
-	projectUpdated: Record<string, string>,
-): BumpType[] {
-	const bumpTypes = new Set<BumpType>();
-
-	for (const [projectPath, currentVersion] of Object.entries(projectUpdated)) {
-		const project = config.projects.find((p) => p.path === projectPath);
-		if (!project) {
-			continue;
-		}
-
-		const bumpType = compareVersions(project.baseVersion, currentVersion);
-		if (bumpType) {
-			bumpTypes.add(bumpType);
-		}
-	}
-
-	return Array.from(bumpTypes);
 }
 
 /**

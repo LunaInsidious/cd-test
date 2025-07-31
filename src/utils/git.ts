@@ -3,7 +3,7 @@ import { spawn } from "node:child_process";
 /**
  * Git utility functions for branch operations
  */
-export class GitError extends Error {
+class GitError extends Error {
 	constructor(
 		message: string,
 		public readonly command: string,

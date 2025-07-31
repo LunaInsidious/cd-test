@@ -6,7 +6,7 @@ import { getAvailableBranches, getCurrentBranch } from "./git.js";
  * GitHub CLI utility functions
  */
 
-export class GitHubError extends Error {
+class GitHubError extends Error {
 	constructor(
 		message: string,
 		public readonly command: string,
