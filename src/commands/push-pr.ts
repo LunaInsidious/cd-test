@@ -12,6 +12,7 @@ import {
 } from "../utils/config.js";
 import {
 	commitChanges,
+	fetchAndPruneBranches,
 	getAvailableBranches,
 	getChangedFiles,
 	getCurrentBranch,
@@ -204,6 +205,8 @@ async function createPullRequestInteractive(
 	defaultBaseBranch: string,
 ): Promise<string> {
 	try {
+		// Fetch available branches and prune stale ones
+		await fetchAndPruneBranches();
 		// Get available branches and current branch
 		const [availableBranches, currentBranch] = await Promise.all([
 			getAvailableBranches(),
@@ -225,9 +228,6 @@ async function createPullRequestInteractive(
 			});
 		}
 
-		// Add new branch creation option
-		branchChoices.push({ title: "Create new branch...", value: "__new__" });
-
 		const response = await prompts({
 			type: "select",
 			name: "baseBranch",
@@ -236,27 +236,10 @@ async function createPullRequestInteractive(
 			initial: 0, // Default to first option (default branch)
 		});
 
-		if (!response.baseBranch) {
+		const baseBranch = response.baseBranch;
+
+		if (!baseBranch) {
 			throw new Error("No base branch selected");
-		}
-
-		let baseBranch = response.baseBranch;
-
-		// Handle new branch creation
-		if (baseBranch === "__new__") {
-			const newBranchResponse = await prompts({
-				type: "text",
-				name: "newBranch",
-				message: "Enter new branch name:",
-				validate: (value: string) =>
-					value.trim().length > 0 || "Branch name cannot be empty",
-			});
-
-			if (!newBranchResponse.newBranch) {
-				throw new Error("No branch name provided");
-			}
-
-			baseBranch = newBranchResponse.newBranch.trim();
 		}
 
 		// Create the PR with selected base branch
@@ -385,7 +368,8 @@ async function calculateNewVersions(
 			);
 		}
 
-		const hasBeenReleased = projectBumpType
+		// Check if a higher bump type has been released
+		const hasBumpBeenReleased = projectBumpType
 			? hasVersionBumpBeenReleased([projectBumpType], selectedBump)
 			: false;
 
@@ -395,8 +379,8 @@ async function calculateNewVersions(
 			// For stable releases, no suffix - just the base version with bump applied
 			const newBaseVersion = bumpVersion(project.baseVersion, selectedBump);
 			newVersion = newBaseVersion;
-		} else if (hasBeenReleased && currentProjectVersion) {
-			// Use the existing projectUpdated version, just update suffix
+		} else if (hasBumpBeenReleased && currentProjectVersion) {
+			// If the same or higher bump was already released, keep the existing version with updated suffix
 			const existingVersionBase = currentProjectVersion.split("-")[0];
 			if (!existingVersionBase) {
 				throw new Error(
@@ -408,15 +392,11 @@ async function calculateNewVersions(
 				branchInfo.tag,
 				currentVersionTag.versionSuffixStrategy,
 			);
-		} else if (hasBeenReleased) {
-			// No workspace version but bump already released, use base version
-			newVersion = await generateVersionWithSuffix(
-				project.baseVersion,
-				branchInfo.tag,
-				currentVersionTag.versionSuffixStrategy,
-			);
 		} else {
 			// Apply bump and generate new version
+			// This covers both cases:
+			// 1. No previous bump was released
+			// 2. A smaller bump was released but user wants a larger bump
 			const newBaseVersion = bumpVersion(project.baseVersion, selectedBump);
 			newVersion = await generateVersionWithSuffix(
 				newBaseVersion,

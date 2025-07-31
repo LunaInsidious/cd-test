@@ -1,4 +1,4 @@
-import { access, readdir, readFile, unlink, writeFile } from "node:fs/promises";
+import { readdir, readFile, unlink, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { z } from "zod";
 import { isSystemError, NotFoundError, ValidationError } from "./error.js";
@@ -26,7 +26,7 @@ const RegistrySchema = z.enum(["npm", "crates", "docker"]);
 
 const VersionSuffixStrategySchema = z.enum(["timestamp", "increment"]);
 
-export const VersionTagValueSchema = z.object({
+const VersionTagValueSchema = z.object({
 	versionSuffixStrategy: VersionSuffixStrategySchema,
 	next: z.string().optional(),
 });
@@ -65,18 +65,6 @@ const BranchInfoSchema = z.object({
 	projectUpdated: z.record(z.string(), z.string()).optional(),
 });
 export type BranchInfo = z.infer<typeof BranchInfoSchema>;
-
-/**
- * Check if cd-tools has been initialized
- */
-export async function hasConfigFile(): Promise<boolean> {
-	try {
-		await access(CONFIG_PATH);
-		return true;
-	} catch {
-		return false;
-	}
-}
 
 /**
  * Load configuration file

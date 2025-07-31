@@ -28,10 +28,10 @@ vi.mock("../utils/config.js", async (importOriginal) => {
 	}
 	return {
 		...actual,
-		checkInitialized: vi.fn(),
 		loadConfig: vi.fn(),
 		loadBranchInfo: vi.fn(),
 		updateBranchInfo: vi.fn(),
+		updateConfig: vi.fn(),
 	};
 });
 
@@ -40,6 +40,7 @@ vi.mock("../utils/git.js", () => ({
 	getChangedFiles: vi.fn(),
 	commitChanges: vi.fn(),
 	pushChanges: vi.fn(),
+	fetchAndPruneBranches: vi.fn(),
 	getAvailableBranches: vi.fn(),
 	getTagsMatchingPattern: vi.fn(),
 }));
@@ -51,7 +52,8 @@ vi.mock("../utils/version-updater.js", () => ({
 
 vi.mock("../utils/github.js", () => ({
 	checkPrExists: vi.fn(),
-	createPullRequestInteractive: vi.fn(),
+	getCurrentPrUrl: vi.fn(),
+	createPullRequest: vi.fn(),
 }));
 
 vi.mock("node:process", () => ({
@@ -61,22 +63,21 @@ vi.mock("node:process", () => ({
 import prompts from "prompts";
 import {
 	type Config,
-	checkInitialized,
 	loadBranchInfo,
 	loadConfig,
 	updateBranchInfo,
 } from "../utils/config.js";
+import { NotFoundError } from "../utils/error.js";
 import {
 	commitChanges,
+	fetchAndPruneBranches,
+	getAvailableBranches,
 	getChangedFiles,
 	getCurrentBranch,
 	getTagsMatchingPattern,
 	pushChanges,
 } from "../utils/git.js";
-import {
-	checkPrExists,
-	createPullRequestInteractive,
-} from "../utils/github.js";
+import { createPullRequest, getCurrentPrUrl } from "../utils/github.js";
 import {
 	getPackageName,
 	updateMultipleProjectVersions,
@@ -84,7 +85,6 @@ import {
 
 // Mock typed functions
 const mockPrompts = vi.mocked(prompts);
-const mockCheckInitialized = vi.mocked(checkInitialized);
 const mockLoadConfig = vi.mocked(loadConfig);
 const mockLoadBranchInfo = vi.mocked(loadBranchInfo);
 const mockGetCurrentBranch = vi.mocked(getCurrentBranch);
@@ -92,15 +92,15 @@ const mockGetChangedFiles = vi.mocked(getChangedFiles);
 const mockUpdateBranchInfo = vi.mocked(updateBranchInfo);
 const mockCommitChanges = vi.mocked(commitChanges);
 const mockPushChanges = vi.mocked(pushChanges);
+const mockGetAvailableBranches = vi.mocked(getAvailableBranches);
+const mockFetchAndPruneBranches = vi.mocked(fetchAndPruneBranches);
 const mockGetTagsMatchingPattern = vi.mocked(getTagsMatchingPattern);
 const mockUpdateMultipleProjectVersions = vi.mocked(
 	updateMultipleProjectVersions,
 );
 const mockGetPackageName = vi.mocked(getPackageName);
-const mockCheckPrExists = vi.mocked(checkPrExists);
-const mockCreatePullRequestInteractive = vi.mocked(
-	createPullRequestInteractive,
-);
+const mockGetCurrentPrUrl = vi.mocked(getCurrentPrUrl);
+const mockCreatePullRequest = vi.mocked(createPullRequest);
 let mockProcessExit: MockInstance<
 	(code?: number | string | null | undefined) => never
 >;
@@ -152,7 +152,6 @@ describe("pushPrCommand", () => {
 		mockConsoleLog = vi.spyOn(console, "log");
 		mockConsoleError = vi.spyOn(console, "error");
 		// Set default successful mocks
-		mockCheckInitialized.mockResolvedValue(true);
 		mockLoadConfig.mockResolvedValue(mockConfig);
 		mockGetCurrentBranch.mockResolvedValue("feat/test(alpha)");
 		mockLoadBranchInfo.mockResolvedValue(mockBranchInfo);
@@ -163,14 +162,19 @@ describe("pushPrCommand", () => {
 		mockUpdateBranchInfo.mockResolvedValue(undefined);
 		mockCommitChanges.mockResolvedValue(undefined);
 		mockPushChanges.mockResolvedValue(undefined);
+		mockGetAvailableBranches.mockResolvedValue(["main", "develop"]);
+		mockFetchAndPruneBranches.mockResolvedValue(undefined);
 		mockGetTagsMatchingPattern.mockResolvedValue([]);
+		// Default prompts response
+		mockPrompts.mockResolvedValueOnce({ bumpType: "patch" });
+		mockPrompts.mockResolvedValueOnce({ baseBranch: "main" });
 		mockUpdateMultipleProjectVersions.mockResolvedValue(undefined);
 		mockGetPackageName.mockImplementation(async (path: string) => {
 			if (path === "package-b") return "package-b";
 			return "package-a";
 		});
-		mockCheckPrExists.mockResolvedValue(false);
-		mockCreatePullRequestInteractive.mockResolvedValue(
+		mockGetCurrentPrUrl.mockResolvedValue(null);
+		mockCreatePullRequest.mockResolvedValue(
 			"https://github.com/test/repo/pull/123",
 		);
 	});
@@ -181,40 +185,31 @@ describe("pushPrCommand", () => {
 
 	describe("initialization checks", () => {
 		it("should display error and exit if not initialized", async () => {
-			mockCheckInitialized.mockResolvedValue(false);
+			mockLoadConfig.mockRejectedValue(
+				new NotFoundError("cd-tools has not been initialized"),
+			);
 
 			await expect(pushPrCommand()).rejects.toThrow(
 				"process.exit() called with code 1",
 			);
 
 			expect(mockConsoleError).toHaveBeenCalledWith(
-				"❌ cd-tools has not been initialized. Run 'cd-tools init' first.",
-			);
-			expect(mockProcessExit).toHaveBeenCalledWith(1);
-		});
-
-		it("should display error and exit if config loading fails", async () => {
-			mockLoadConfig.mockRejectedValue(new Error("Config not found"));
-
-			await expect(pushPrCommand()).rejects.toThrow(
-				"process.exit() called with code 1",
-			);
-
-			expect(mockConsoleError).toHaveBeenCalledWith(
-				"❌ Failed to load configuration: Config not found",
+				"❌ Configuration file not found. Run 'cd-tools init' first.",
 			);
 			expect(mockProcessExit).toHaveBeenCalledWith(1);
 		});
 
 		it("should display error and exit if branch info not found", async () => {
-			mockLoadBranchInfo.mockResolvedValue(null);
+			mockLoadBranchInfo.mockRejectedValue(
+				new NotFoundError("Branch info not found"),
+			);
 
 			await expect(pushPrCommand()).rejects.toThrow(
 				"process.exit() called with code 1",
 			);
 
 			expect(mockConsoleError).toHaveBeenCalledWith(
-				"❌ No branch info found. Run 'cd-tools start-pr' first.",
+				'❌ Branch info not found for "feat/test(alpha)". Run "cd-tools start-pr" first.',
 			);
 			expect(mockProcessExit).toHaveBeenCalledWith(1);
 		});
@@ -235,7 +230,6 @@ describe("pushPrCommand", () => {
 			await pushPrCommand();
 
 			// Verify key function calls
-			expect(mockCheckInitialized).toHaveBeenCalled();
 			expect(mockLoadConfig).toHaveBeenCalled();
 			expect(mockGetCurrentBranch).toHaveBeenCalled();
 			expect(mockLoadBranchInfo).toHaveBeenCalled();
@@ -278,7 +272,9 @@ describe("pushPrCommand", () => {
 
 			mockConsoleLog.mockRestore();
 			const consoleLogSpy = vi.spyOn(console, "log");
+			mockPrompts.mockReset();
 			mockPrompts.mockResolvedValueOnce({ bumpType: "minor" });
+			mockPrompts.mockResolvedValueOnce({ baseBranch: "main" });
 
 			const mockDate = new Date("2023-12-25T10:30:45.123Z");
 			vi.setSystemTime(mockDate);
@@ -329,10 +325,10 @@ describe("pushPrCommand", () => {
 		});
 
 		it("should handle user cancellation", async () => {
-			mockPrompts.mockResolvedValueOnce({ bumpType: undefined });
+			mockPrompts.mockReset();
+			mockPrompts.mockRejectedValue(new Error("User cancelled"));
 
-			await expect(pushPrCommand()).rejects.toThrow();
-			expect(mockProcessExit).toHaveBeenCalledWith(1);
+			await expect(pushPrCommand()).rejects.toThrow("User cancelled");
 		});
 	});
 });

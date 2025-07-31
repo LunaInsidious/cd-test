@@ -24,7 +24,6 @@ vi.mock("../utils/config.js", async (importOriginal) => {
 	}
 	return {
 		...actual,
-		checkInitialized: vi.fn(),
 		deleteBranchInfo: vi.fn(),
 		loadBranchInfo: vi.fn(),
 		loadConfig: vi.fn(),
@@ -53,15 +52,20 @@ vi.mock("../utils/github.js", () => ({
 	mergePullRequest: vi.fn(),
 }));
 
+vi.mock("prompts", () => ({
+	default: vi.fn(),
+}));
+
+import prompts from "prompts";
 import {
 	type Config,
-	checkInitialized,
 	deleteBranchInfo,
 	loadBranchInfo,
 	loadConfig,
 	updateBranchInfo,
 	updateConfig,
 } from "../utils/config.js";
+import { NotFoundError } from "../utils/error.js";
 import {
 	commitChanges,
 	deleteLocalBranch,
@@ -70,18 +74,13 @@ import {
 	pushChanges,
 	switchToBranch,
 } from "../utils/git.js";
-import {
-	checkPrExists,
-	getCurrentPrUrl,
-	mergePullRequest,
-} from "../utils/github.js";
+import { getCurrentPrUrl, mergePullRequest } from "../utils/github.js";
 import {
 	getPackageName,
 	updateMultipleProjectVersions,
 } from "../utils/version-updater.js";
 
 // Mock typed functions
-const mockCheckInitialized = vi.mocked(checkInitialized);
 const mockLoadConfig = vi.mocked(loadConfig);
 const mockLoadBranchInfo = vi.mocked(loadBranchInfo);
 const mockGetCurrentBranch = vi.mocked(getCurrentBranch);
@@ -93,13 +92,13 @@ const mockPushChanges = vi.mocked(pushChanges);
 const mockUpdateMultipleProjectVersions = vi.mocked(
 	updateMultipleProjectVersions,
 );
-const mockCheckPrExists = vi.mocked(checkPrExists);
 const mockGetCurrentPrUrl = vi.mocked(getCurrentPrUrl);
 const mockMergePullRequest = vi.mocked(mergePullRequest);
 const mockGetTagsMatchingPattern = vi.mocked(getTagsMatchingPattern);
 const mockSwitchToBranch = vi.mocked(switchToBranch);
 const mockDeleteLocalBranch = vi.mocked(deleteLocalBranch);
 const mockGetPackageName = vi.mocked(getPackageName);
+const mockPrompts = vi.mocked(prompts);
 
 let mockProcessExit: MockInstance<
 	(code?: number | string | null | undefined) => never
@@ -163,11 +162,9 @@ describe("endPrCommand", () => {
 		mockConsoleError = vi.spyOn(console, "error");
 
 		// Set default successful mocks
-		mockCheckInitialized.mockResolvedValue(true);
 		mockLoadConfig.mockResolvedValue(mockConfig);
 		mockGetCurrentBranch.mockResolvedValue("feat/test(alpha)");
 		mockLoadBranchInfo.mockResolvedValue(mockBranchInfo);
-		mockCheckPrExists.mockResolvedValue(true);
 		mockGetCurrentPrUrl.mockResolvedValue(
 			"https://github.com/test/repo/pull/123",
 		);
@@ -185,6 +182,8 @@ describe("endPrCommand", () => {
 		mockUpdateMultipleProjectVersions.mockResolvedValue(undefined);
 		mockMergePullRequest.mockResolvedValue(undefined);
 		mockGetTagsMatchingPattern.mockResolvedValue([]);
+		// Default to confirming merge
+		mockPrompts.mockResolvedValue({ confirm: true });
 	});
 
 	afterEach(() => {
@@ -193,46 +192,34 @@ describe("endPrCommand", () => {
 
 	describe("initialization checks", () => {
 		it("should display error and exit if not initialized", async () => {
-			mockCheckInitialized.mockResolvedValue(false);
+			mockLoadConfig.mockRejectedValue(new NotFoundError("Config not found"));
 
 			await expect(endPrCommand()).rejects.toThrow(
 				"process.exit() called with code 1",
 			);
 
 			expect(mockConsoleError).toHaveBeenCalledWith(
-				"❌ cd-tools has not been initialized. Run 'cd-tools init' first.",
+				"❌ Configuration file not found. Run 'cd-tools init' first.",
 			);
 			expect(mockProcessExit).toHaveBeenCalledWith(1);
 		});
-
-		it("should display error and exit if config loading fails", async () => {
-			mockLoadConfig.mockRejectedValue(new Error("Config not found"));
-
-			await expect(endPrCommand()).rejects.toThrow(
-				"process.exit() called with code 1",
-			);
-
-			expect(mockConsoleError).toHaveBeenCalledWith(
-				"❌ Failed to load configuration: Config not found",
-			);
-			expect(mockProcessExit).toHaveBeenCalledWith(1);
-		});
-
 		it("should display error and exit if branch info not found", async () => {
-			mockLoadBranchInfo.mockResolvedValue(null);
+			mockLoadBranchInfo.mockRejectedValue(
+				new NotFoundError("Branch info not found"),
+			);
 
 			await expect(endPrCommand()).rejects.toThrow(
 				"process.exit() called with code 1",
 			);
 
 			expect(mockConsoleError).toHaveBeenCalledWith(
-				"❌ No branch info found. Run 'cd-tools start-pr' first.",
+				'❌ Branch info not found for "feat/test(alpha)". Run "cd-tools start-pr" first.',
 			);
 			expect(mockProcessExit).toHaveBeenCalledWith(1);
 		});
 
 		it("should display error and exit if PR not found", async () => {
-			mockCheckPrExists.mockResolvedValue(false);
+			mockGetCurrentPrUrl.mockResolvedValue(null);
 
 			await expect(endPrCommand()).rejects.toThrow(
 				"process.exit() called with code 1",
@@ -252,7 +239,7 @@ describe("endPrCommand", () => {
 			);
 
 			expect(mockConsoleError).toHaveBeenCalledWith(
-				"❌ Could not get pull request URL.",
+				"❌ No pull request found. Run 'cd-tools push-pr' first.",
 			);
 			expect(mockProcessExit).toHaveBeenCalledWith(1);
 		});
@@ -271,11 +258,10 @@ describe("endPrCommand", () => {
 			await endPrCommand();
 
 			// Verify key function calls
-			expect(mockCheckInitialized).toHaveBeenCalled();
 			expect(mockLoadConfig).toHaveBeenCalled();
 			expect(mockGetCurrentBranch).toHaveBeenCalled();
 			expect(mockLoadBranchInfo).toHaveBeenCalled();
-			expect(mockCheckPrExists).toHaveBeenCalled();
+			expect(mockGetCurrentPrUrl).toHaveBeenCalled();
 			expect(mockGetCurrentPrUrl).toHaveBeenCalled();
 
 			// Should update versions for next tag
@@ -361,6 +347,28 @@ describe("endPrCommand", () => {
 			// Should still clean up and merge
 			expect(mockDeleteBranchInfo).toHaveBeenCalled();
 			expect(mockMergePullRequest).toHaveBeenCalled();
+		});
+
+		it("should exit without merging when user declines confirmation", async () => {
+			// User declines merge
+			mockPrompts.mockResolvedValue({ confirm: false });
+
+			// Allow console output for this test
+			mockConsoleLog.mockRestore();
+			const consoleLogSpy = vi.spyOn(console, "log");
+
+			await endPrCommand();
+
+			// Should not merge or clean up
+			expect(mockMergePullRequest).not.toHaveBeenCalled();
+			expect(mockDeleteBranchInfo).not.toHaveBeenCalled();
+			expect(mockSwitchToBranch).not.toHaveBeenCalled();
+			expect(mockDeleteLocalBranch).not.toHaveBeenCalled();
+			expect(mockUpdateMultipleProjectVersions).not.toHaveBeenCalled();
+
+			expect(consoleLogSpy).toHaveBeenCalledWith("❌ Merge cancelled.");
+
+			consoleLogSpy.mockRestore();
 		});
 	});
 });

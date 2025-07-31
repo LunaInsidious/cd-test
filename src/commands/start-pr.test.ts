@@ -3,7 +3,6 @@ import { startPrCommand } from "./start-pr.js";
 
 // Mock all external dependencies
 vi.mock("../utils/config.js", () => ({
-	checkInitialized: vi.fn(),
 	loadConfig: vi.fn(),
 	getAvailableVersionTags: vi.fn(),
 	createBranchInfo: vi.fn(),
@@ -24,7 +23,6 @@ import prompts from "prompts";
 // Import mocked modules
 import {
 	type Config,
-	checkInitialized,
 	createBranchInfo,
 	getAvailableVersionTags,
 	loadConfig,
@@ -36,7 +34,6 @@ import {
 	validateBranchName,
 } from "../utils/git.js";
 
-const mockCheckInitialized = vi.mocked(checkInitialized);
 const mockLoadConfig = vi.mocked(loadConfig);
 const mockGetAvailableVersionTags = vi.mocked(getAvailableVersionTags);
 const mockCreateBranchInfo = vi.mocked(createBranchInfo);
@@ -67,7 +64,6 @@ describe("startPrCommand", () => {
 		});
 
 		// Default successful mocks
-		mockCheckInitialized.mockResolvedValue(true);
 		mockGetCurrentBranch.mockResolvedValue("main");
 		mockPullLatest.mockResolvedValue();
 		mockLoadConfig.mockResolvedValue(mockConfig);
@@ -94,14 +90,13 @@ describe("startPrCommand", () => {
 			await startPrCommand();
 
 			// Should check initialization
-			expect(mockCheckInitialized).toHaveBeenCalledOnce();
+			expect(mockLoadConfig).toHaveBeenCalledOnce();
 
 			// Should get current branch and pull latest
 			expect(mockGetCurrentBranch).toHaveBeenCalledOnce();
 			expect(mockPullLatest).toHaveBeenCalledWith("main");
 
 			// Should load config and get available tags
-			expect(mockLoadConfig).toHaveBeenCalledOnce();
 			expect(mockGetAvailableVersionTags).toHaveBeenCalledWith(mockConfig);
 
 			// Should prompt for release mode and branch name
@@ -193,17 +188,6 @@ describe("startPrCommand", () => {
 	});
 
 	describe("error handling", () => {
-		it("should exit if not initialized", async () => {
-			mockCheckInitialized.mockResolvedValue(false);
-
-			await expect(startPrCommand()).rejects.toThrow("process.exit called");
-
-			expect(console.error).toHaveBeenCalledWith(
-				"❌ cd-tools has not been initialized. Run 'cd-tools init' first.",
-			);
-			expect(process.exit).toHaveBeenCalledWith(1);
-		});
-
 		it("should exit if pull fails", async () => {
 			mockPullLatest.mockRejectedValue(new Error("Network error"));
 
@@ -325,7 +309,9 @@ describe("startPrCommand", () => {
 			await startPrCommand();
 
 			expect(consoleSpy).toHaveBeenCalledWith("Next steps:");
-			expect(consoleSpy).toHaveBeenCalledWith("1. Make your changes");
+			expect(consoleSpy).toHaveBeenCalledWith(
+				"1. Make your changes and commit them to the new branch.",
+			);
 			expect(consoleSpy).toHaveBeenCalledWith(
 				"2. Run 'cd-tools push-pr' to update versions and create PR",
 			);
